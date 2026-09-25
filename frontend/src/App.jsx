@@ -1,8 +1,11 @@
 import React from 'react';
+import { Routes, Route, Link, Navigate } from 'react-router-dom';
 import SystemStatus from './components/SystemStatus';
-import { Layers, GitBranch, BookOpen, Terminal } from 'lucide-react';
+import Register from './pages/Register';
+import Login from './pages/Login';
+import { Layers, Terminal, UserPlus } from 'lucide-react';
 
-export default function App() {
+function Dashboard() {
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100">
       {/* Navigation Header */}
@@ -26,6 +29,13 @@ export default function App() {
             <span className="hidden sm:inline-flex text-xs px-2.5 py-1 rounded-full bg-slate-800 text-slate-300 border border-slate-700 font-mono">
               FastAPI + React + Supabase Postgres
             </span>
+            <Link
+              to="/register"
+              className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-sky-500 hover:bg-sky-400 text-slate-950 font-semibold transition shadow-sm shadow-sky-500/20"
+            >
+              <UserPlus className="w-3.5 h-3.5" />
+              <span>Sign Up</span>
+            </Link>
           </div>
         </div>
       </header>
@@ -83,5 +93,16 @@ export default function App() {
         AI-Based Inventory Replenishment and Supplier Decision Support System • University Group Project
       </footer>
     </div>
+  );
+}
+
+export default function App() {
+  return (
+    <Routes>
+      <Route path="/" element={<Dashboard />} />
+      <Route path="/register" element={<Register />} />
+      <Route path="/login" element={<Login />} />
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
   );
 }
