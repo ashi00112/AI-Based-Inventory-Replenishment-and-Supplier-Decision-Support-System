@@ -8,7 +8,7 @@ engine = create_engine(
     settings.sync_database_url,
     pool_pre_ping=True,
     echo=settings.DEBUG,
-    connect_args={"connect_timeout": 5},
+    connect_args={"connect_timeout": 15},
 )
 
 SessionLocal = sessionmaker(
