@@ -3,6 +3,8 @@ from sqlalchemy.orm import Session
 
 from app.core.security import create_access_token
 from app.database.session import get_db
+from app.dependencies.auth import get_current_user
+from app.models.user import User
 from app.schemas.auth import (
     TokenResponse,
     UserLogin,
@@ -85,3 +87,21 @@ def login(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="User account is inactive.",
         )
+
+
+@router.get(
+    "/me",
+    response_model=UserResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Get current authenticated user",
+    description="Returns the profile of the currently authenticated user based on the Bearer token.",
+)
+def get_me(
+    current_user: User = Depends(get_current_user),
+) -> UserResponse:
+    """
+    Protected endpoint — requires a valid Bearer token.
+    Returns the current user's public profile (never password or password_hash).
+    """
+    return current_user
+

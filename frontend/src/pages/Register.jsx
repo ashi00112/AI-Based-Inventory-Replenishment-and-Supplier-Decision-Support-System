@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Layers, User, Mail, Lock, CheckCircle2, AlertCircle, Loader2, ArrowRight } from 'lucide-react';
+import { User, Mail, Lock, CheckCircle2, AlertCircle, Loader2, ArrowRight } from 'lucide-react';
 import { registerUser } from '../services/authApi';
 
 export default function Register() {
@@ -104,19 +104,18 @@ export default function Register() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col justify-between">
+    <div className="min-h-screen bg-neutral-950 text-neutral-100 flex flex-col justify-between selection:bg-violet-500/30 selection:text-white">
       {/* Top Header */}
-      <header className="border-b border-slate-800 bg-slate-900/50 backdrop-blur-md sticky top-0 z-50">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
-          <Link to="/" className="flex items-center gap-3 hover:opacity-90 transition">
-            <div className="p-2 bg-sky-500/10 border border-sky-500/30 rounded-lg">
-              <Layers className="w-5 h-5 text-sky-400" />
+      <header className="sticky top-0 z-50 w-full">
+        <div className="absolute inset-0 bg-neutral-950/70 backdrop-blur-2xl border-b border-white/[0.04]" />
+        <div className="relative max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
+          <Link to="/" className="flex items-center gap-2.5 group">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-500 to-violet-600 flex items-center justify-center shadow-lg shadow-violet-500/20">
+              <span className="text-white font-bold text-sm tracking-tight">S</span>
             </div>
             <div>
-              <span className="text-sm font-semibold text-white tracking-tight">
-                SmartSupply AI
-              </span>
-              <p className="text-[11px] text-slate-400 font-mono">
+              <span className="text-sm font-semibold text-white tracking-tight">SmartSupply</span>
+              <p className="text-[10px] text-neutral-500 leading-tight font-medium">
                 Decision Support System
               </p>
             </div>
@@ -124,7 +123,7 @@ export default function Register() {
 
           <Link
             to="/"
-            className="text-xs text-slate-400 hover:text-sky-400 transition font-medium"
+            className="text-xs text-neutral-500 hover:text-violet-400 transition font-medium"
           >
             ← Back to Dashboard
           </Link>
@@ -135,20 +134,23 @@ export default function Register() {
       <main className="flex-1 flex items-center justify-center p-4 sm:p-6 my-8">
         <div className="w-full max-w-md">
           {/* Card Container */}
-          <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-6 sm:p-8 shadow-xl backdrop-blur-md">
+          <div className="bg-neutral-900/60 border border-white/[0.06] rounded-2xl p-6 sm:p-8 shadow-xl backdrop-blur-md">
             {successData ? (
               /* Success State Screen */
               <div className="text-center py-4 space-y-4">
-                <div className="w-14 h-14 bg-emerald-500/10 border border-emerald-500/30 rounded-full flex items-center justify-center mx-auto text-emerald-400">
+                <div className="w-14 h-14 bg-emerald-500/10 border border-emerald-500/20 rounded-full flex items-center justify-center mx-auto text-emerald-400">
                   <CheckCircle2 className="w-8 h-8" />
                 </div>
                 <div>
                   <h2 className="text-xl font-bold text-white tracking-tight">
                     Account Created Successfully!
                   </h2>
-                  <p className="text-sm text-slate-300 mt-2">
+                  <p className="text-sm text-neutral-300 mt-2">
                     Welcome aboard, <strong className="text-white">{successData.name}</strong>.
-                    Your account has been registered with role <span className="font-mono text-sky-400">user</span>.
+                    Your account has been registered with role{' '}
+                    <span className="font-mono text-violet-400 bg-violet-500/10 px-1.5 py-0.5 rounded text-xs">
+                      user
+                    </span>.
                   </p>
                 </div>
 
@@ -156,7 +158,7 @@ export default function Register() {
                   <button
                     type="button"
                     onClick={() => navigate('/login')}
-                    className="w-full inline-flex items-center justify-center gap-2 py-2.5 px-4 bg-sky-500 hover:bg-sky-400 text-slate-950 font-semibold rounded-lg transition shadow-lg shadow-sky-500/20 text-sm"
+                    className="w-full inline-flex items-center justify-center gap-2 py-2.5 px-4 bg-violet-600 hover:bg-violet-500 text-white font-medium rounded-lg transition shadow-lg shadow-violet-600/25 text-sm"
                   >
                     Proceed to Log In
                     <ArrowRight className="w-4 h-4" />
@@ -167,13 +169,13 @@ export default function Register() {
               /* Registration Form */
               <div>
                 <div className="mb-6">
-                  <span className="inline-block text-[11px] font-semibold uppercase tracking-wider text-sky-400 bg-sky-950/60 px-2.5 py-0.5 rounded-full border border-sky-800/40 mb-2">
+                  <span className="inline-block text-[11px] font-semibold uppercase tracking-wider text-violet-400 bg-violet-500/10 px-2.5 py-0.5 rounded-full mb-2">
                     Get Started
                   </span>
                   <h2 className="text-2xl font-bold text-white tracking-tight">
                     Create your account
                   </h2>
-                  <p className="text-xs text-slate-400 mt-1">
+                  <p className="text-xs text-neutral-500 mt-1">
                     Sign up to access inventory replenishment and supplier decision intelligence.
                   </p>
                 </div>
@@ -182,9 +184,9 @@ export default function Register() {
                 {serverError && (
                   <div
                     role="alert"
-                    className="mb-5 p-3 rounded-lg bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs flex items-start gap-2.5"
+                    className="mb-5 p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-300 text-xs flex items-start gap-2.5"
                   >
-                    <AlertCircle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
+                    <AlertCircle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
                     <span>{serverError}</span>
                   </div>
                 )}
@@ -194,12 +196,12 @@ export default function Register() {
                   <div>
                     <label
                       htmlFor="name"
-                      className="block text-xs font-medium text-slate-300 mb-1"
+                      className="block text-xs font-medium text-neutral-400 mb-1"
                     >
                       Full Name
                     </label>
                     <div className="relative">
-                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500">
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-neutral-500">
                         <User className="w-4 h-4" />
                       </div>
                       <input
@@ -211,15 +213,15 @@ export default function Register() {
                         onChange={handleChange}
                         disabled={isLoading}
                         placeholder="John Silva"
-                        className={`w-full pl-9 pr-3 py-2 bg-slate-950/80 border rounded-lg text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 transition ${
+                        className={`w-full pl-9 pr-3 py-2 bg-neutral-900 border rounded-lg text-sm text-white placeholder-neutral-500 focus:outline-none focus:ring-1 transition ${
                           fieldErrors.name
-                            ? 'border-rose-500 focus:ring-rose-500/20'
-                            : 'border-slate-800 focus:border-sky-500 focus:ring-sky-500/20'
+                            ? 'border-red-500/50 focus:border-red-500 focus:ring-red-500/20'
+                            : 'border-white/[0.08] focus:border-violet-500 focus:ring-violet-500/20'
                         }`}
                       />
                     </div>
                     {fieldErrors.name && (
-                      <p className="text-[11px] text-rose-400 mt-1">{fieldErrors.name}</p>
+                      <p className="text-[11px] text-red-400 mt-1">{fieldErrors.name}</p>
                     )}
                   </div>
 
@@ -227,12 +229,12 @@ export default function Register() {
                   <div>
                     <label
                       htmlFor="email"
-                      className="block text-xs font-medium text-slate-300 mb-1"
+                      className="block text-xs font-medium text-neutral-400 mb-1"
                     >
                       Work Email
                     </label>
                     <div className="relative">
-                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500">
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-neutral-500">
                         <Mail className="w-4 h-4" />
                       </div>
                       <input
@@ -244,15 +246,15 @@ export default function Register() {
                         onChange={handleChange}
                         disabled={isLoading}
                         placeholder="john@example.com"
-                        className={`w-full pl-9 pr-3 py-2 bg-slate-950/80 border rounded-lg text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 transition ${
+                        className={`w-full pl-9 pr-3 py-2 bg-neutral-900 border rounded-lg text-sm text-white placeholder-neutral-500 focus:outline-none focus:ring-1 transition ${
                           fieldErrors.email
-                            ? 'border-rose-500 focus:ring-rose-500/20'
-                            : 'border-slate-800 focus:border-sky-500 focus:ring-sky-500/20'
+                            ? 'border-red-500/50 focus:border-red-500 focus:ring-red-500/20'
+                            : 'border-white/[0.08] focus:border-violet-500 focus:ring-violet-500/20'
                         }`}
                       />
                     </div>
                     {fieldErrors.email && (
-                      <p className="text-[11px] text-rose-400 mt-1">{fieldErrors.email}</p>
+                      <p className="text-[11px] text-red-400 mt-1">{fieldErrors.email}</p>
                     )}
                   </div>
 
@@ -260,12 +262,12 @@ export default function Register() {
                   <div>
                     <label
                       htmlFor="password"
-                      className="block text-xs font-medium text-slate-300 mb-1"
+                      className="block text-xs font-medium text-neutral-400 mb-1"
                     >
                       Password
                     </label>
                     <div className="relative">
-                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500">
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-neutral-500">
                         <Lock className="w-4 h-4" />
                       </div>
                       <input
@@ -277,15 +279,15 @@ export default function Register() {
                         onChange={handleChange}
                         disabled={isLoading}
                         placeholder="Minimum 8 characters"
-                        className={`w-full pl-9 pr-3 py-2 bg-slate-950/80 border rounded-lg text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 transition ${
+                        className={`w-full pl-9 pr-3 py-2 bg-neutral-900 border rounded-lg text-sm text-white placeholder-neutral-500 focus:outline-none focus:ring-1 transition ${
                           fieldErrors.password
-                            ? 'border-rose-500 focus:ring-rose-500/20'
-                            : 'border-slate-800 focus:border-sky-500 focus:ring-sky-500/20'
+                            ? 'border-red-500/50 focus:border-red-500 focus:ring-red-500/20'
+                            : 'border-white/[0.08] focus:border-violet-500 focus:ring-violet-500/20'
                         }`}
                       />
                     </div>
                     {fieldErrors.password && (
-                      <p className="text-[11px] text-rose-400 mt-1">{fieldErrors.password}</p>
+                      <p className="text-[11px] text-red-400 mt-1">{fieldErrors.password}</p>
                     )}
                   </div>
 
@@ -293,12 +295,12 @@ export default function Register() {
                   <div>
                     <label
                       htmlFor="confirmPassword"
-                      className="block text-xs font-medium text-slate-300 mb-1"
+                      className="block text-xs font-medium text-neutral-400 mb-1"
                     >
                       Confirm Password
                     </label>
                     <div className="relative">
-                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500">
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-neutral-500">
                         <Lock className="w-4 h-4" />
                       </div>
                       <input
@@ -310,15 +312,15 @@ export default function Register() {
                         onChange={handleChange}
                         disabled={isLoading}
                         placeholder="Re-enter password"
-                        className={`w-full pl-9 pr-3 py-2 bg-slate-950/80 border rounded-lg text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 transition ${
+                        className={`w-full pl-9 pr-3 py-2 bg-neutral-900 border rounded-lg text-sm text-white placeholder-neutral-500 focus:outline-none focus:ring-1 transition ${
                           fieldErrors.confirmPassword
-                            ? 'border-rose-500 focus:ring-rose-500/20'
-                            : 'border-slate-800 focus:border-sky-500 focus:ring-sky-500/20'
+                            ? 'border-red-500/50 focus:border-red-500 focus:ring-red-500/20'
+                            : 'border-white/[0.08] focus:border-violet-500 focus:ring-violet-500/20'
                         }`}
                       />
                     </div>
                     {fieldErrors.confirmPassword && (
-                      <p className="text-[11px] text-rose-400 mt-1">
+                      <p className="text-[11px] text-red-400 mt-1">
                         {fieldErrors.confirmPassword}
                       </p>
                     )}
@@ -329,7 +331,7 @@ export default function Register() {
                     <button
                       type="submit"
                       disabled={isLoading}
-                      className="w-full flex items-center justify-center gap-2 py-2.5 px-4 bg-sky-500 hover:bg-sky-400 disabled:opacity-60 disabled:cursor-not-allowed text-slate-950 font-semibold rounded-lg transition shadow-lg shadow-sky-500/20 text-sm"
+                      className="w-full flex items-center justify-center gap-2 py-2.5 px-4 bg-violet-600 hover:bg-violet-500 disabled:opacity-60 disabled:cursor-not-allowed text-white font-medium rounded-lg transition shadow-lg shadow-violet-600/25 text-sm"
                     >
                       {isLoading ? (
                         <>
@@ -344,11 +346,11 @@ export default function Register() {
                 </form>
 
                 {/* Footer Navigation */}
-                <div className="mt-6 pt-4 border-t border-slate-800 text-center text-xs text-slate-400">
+                <div className="mt-6 pt-4 border-t border-white/[0.04] text-center text-xs text-neutral-500">
                   Already have an account?{' '}
                   <Link
                     to="/login"
-                    className="text-sky-400 hover:text-sky-300 font-medium transition"
+                    className="text-violet-400 hover:text-violet-300 font-medium transition"
                   >
                     Log in
                   </Link>
@@ -360,7 +362,7 @@ export default function Register() {
       </main>
 
       {/* Page Footer */}
-      <footer className="border-t border-slate-800/80 py-4 text-center text-xs text-slate-500">
+      <footer className="border-t border-white/[0.04] py-4 text-center text-xs text-neutral-600">
         SmartSupply AI • Inventory Replenishment & Supplier Decision Support System
       </footer>
     </div>
