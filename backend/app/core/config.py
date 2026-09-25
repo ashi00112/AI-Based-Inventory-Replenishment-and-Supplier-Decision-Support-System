@@ -37,6 +37,12 @@ class Settings(BaseSettings):
         "postgresql+psycopg://postgres:postgres@localhost:5432/postgres"
     )
 
+    # JWT Authentication
+    JWT_SECRET_KEY: str = "smartsupply-dev-secret-key-at-least-32-bytes-long-change-in-production"
+    JWT_ALGORITHM: str = "HS256"
+    JWT_ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
+
+
     @property
     def sync_database_url(self) -> str:
         """
