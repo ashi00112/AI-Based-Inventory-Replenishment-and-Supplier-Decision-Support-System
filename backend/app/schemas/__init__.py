@@ -7,6 +7,19 @@ from app.schemas.auth import (
     TokenPayload,
 )
 
+from app.schemas.product import ProductCreate, ProductUpdate, ProductResponse
+from app.schemas.inventory import (
+    ProductSummary,
+    InventoryCreate,
+    InventoryUpdate,
+    InventoryResponse,
+)
+
+from app.schemas.inventory_transaction import (
+    InventoryTransactionCreate,
+    InventoryTransactionResponse,
+)
+
 __all__ = [
     "HealthResponse",
     "UserRegister",
@@ -14,6 +27,15 @@ __all__ = [
     "UserResponse",
     "TokenResponse",
     "TokenPayload",
+    "ProductCreate",
+    "ProductUpdate",
+    "ProductResponse",
+    "ProductSummary",
+    "InventoryCreate",
+    "InventoryUpdate",
+    "InventoryResponse",
+    "InventoryTransactionCreate",
+    "InventoryTransactionResponse",
 ]
 
 

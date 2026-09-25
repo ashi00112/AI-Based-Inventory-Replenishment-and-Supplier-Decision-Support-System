@@ -3,9 +3,9 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.orm import Session
 
-from app.core.security import hash_password
+from app.core.security import hash_password, verify_password
 from app.models.user import User, UserRole
-from app.schemas.auth import UserRegister
+from app.schemas.auth import UserRegister, UserLogin
 
 logger = logging.getLogger(__name__)
 
@@ -20,6 +20,21 @@ class UserAlreadyExistsError(Exception):
 class AuthServiceError(Exception):
     """
     Domain exception raised when an unexpected persistence failure occurs.
+    """
+    pass
+
+
+class InvalidCredentialsError(Exception):
+    """
+    Domain exception raised when authentication credentials (email or password) are invalid.
+    Prevents user enumeration by mapping both unknown email and bad password to the same error.
+    """
+    pass
+
+
+class InactiveUserError(Exception):
+    """
+    Domain exception raised when an inactive user attempts to authenticate.
     """
     pass
 
@@ -71,3 +86,35 @@ def create_user(db: Session, user_data: UserRegister) -> User:
 
     db.refresh(new_user)
     return new_user
+
+
+def authenticate_user(db: Session, credentials: UserLogin) -> User:
+    """
+    Authenticates a user using email and password credentials.
+
+    1. Uses normalized email from UserLogin.
+    2. Queries user by email.
+    3. Verifies password using verify_password() against the stored Argon2 hash.
+    4. Rejects inactive accounts.
+    5. Returns authenticated User instance.
+
+    Raises:
+    - InvalidCredentialsError: on unknown email or wrong password.
+    - InactiveUserError: when is_active is False.
+    """
+    normalized_email = credentials.email
+
+    user = db.scalars(
+        select(User).where(User.email == normalized_email)
+    ).first()
+
+    if user is None:
+        raise InvalidCredentialsError("Invalid email or password.")
+
+    if not verify_password(credentials.password, user.password_hash):
+        raise InvalidCredentialsError("Invalid email or password.")
+
+    if not user.is_active:
+        raise InactiveUserError("User account is inactive.")
+
+    return user
