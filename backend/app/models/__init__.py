@@ -7,6 +7,7 @@ from app.models.inventory_transaction import (
     InventoryTransaction,
     InventoryTransactionType,
 )
+from app.models.sales_history import SalesHistory
 
 __all__ = [
     "Base",
@@ -17,6 +18,5 @@ __all__ = [
     "Inventory",
     "InventoryTransaction",
     "InventoryTransactionType",
+    "SalesHistory",
 ]
-
-
