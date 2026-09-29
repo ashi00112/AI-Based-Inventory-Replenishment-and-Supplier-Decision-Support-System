@@ -1,6 +1,16 @@
 from datetime import datetime
-from typing import Optional
+from enum import Enum
+from typing import List, Optional
 from pydantic import BaseModel, ConfigDict, Field, model_validator
+
+
+class InventoryStatus(str, Enum):
+    """
+    Categorical health classification for product inventory.
+    """
+    OUT_OF_STOCK = "out_of_stock"
+    LOW_STOCK = "low_stock"
+    HEALTHY = "healthy"
 
 
 class ProductSummary(BaseModel):
@@ -87,6 +97,43 @@ class InventoryResponse(BaseModel):
     created_at: datetime
     updated_at: datetime
     product: Optional[ProductSummary] = None
+
+    model_config = ConfigDict(
+        from_attributes=True,
+    )
+
+
+class InventoryMonitoringItem(BaseModel):
+    """
+    Structured snapshot of a product's current stock health evaluated by the Inventory Monitoring Agent.
+    """
+    product_id: int = Field(..., description="ID of the associated product")
+    product_name: str = Field(..., description="Descriptive name of the product")
+    sku: Optional[str] = Field(default=None, description="Product SKU code")
+    reorder_point: int = Field(default=0, description="Minimum stock threshold before restock is triggered")
+    on_hand: int = Field(..., description="Physical units currently on hand")
+    reserved: int = Field(..., description="Committed units reserved for orders")
+    incoming: int = Field(..., description="Expected incoming units from suppliers")
+    available_stock: int = Field(..., description="Net available stock (on_hand - reserved)")
+    status: InventoryStatus = Field(..., description="Calculated inventory health status")
+
+    model_config = ConfigDict(
+        from_attributes=True,
+    )
+
+
+class InventoryMonitoringReport(BaseModel):
+    """
+    Aggregated inventory monitoring summary across multiple catalog items.
+    """
+    items: List[InventoryMonitoringItem] = Field(
+        default_factory=list,
+        description="List of monitored inventory item statuses",
+    )
+    total_items: int = Field(..., description="Total number of evaluated inventory items")
+    healthy_count: int = Field(..., description="Count of items with HEALTHY status")
+    low_stock_count: int = Field(..., description="Count of items with LOW_STOCK status")
+    out_of_stock_count: int = Field(..., description="Count of items with OUT_OF_STOCK status")
 
     model_config = ConfigDict(
         from_attributes=True,
