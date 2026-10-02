@@ -5,7 +5,6 @@ import {
   Package,
   Boxes,
   ArrowRightLeft,
-  Truck,
   LogOut,
   Menu,
   X,
@@ -17,7 +16,6 @@ const navLinks = [
   { to: '/products', label: 'Products', icon: Package },
   { to: '/inventory', label: 'Inventory', icon: Boxes },
   { to: '/transactions', label: 'Transactions', icon: ArrowRightLeft },
-  { to: '/suppliers', label: 'Suppliers', icon: Truck },
 ];
 
 export default function Navbar() {
