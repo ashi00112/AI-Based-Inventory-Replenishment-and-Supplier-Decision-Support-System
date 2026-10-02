@@ -19,6 +19,17 @@ from app.schemas.inventory_transaction import (
     InventoryTransactionCreate,
     InventoryTransactionResponse,
 )
+from app.schemas.supplier import (
+    SupplierCreate,
+    SupplierUpdate,
+    SupplierResponse,
+    SupplierSummary,
+)
+from app.schemas.product_supplier import (
+    ProductSupplierCreate,
+    ProductSupplierUpdate,
+    ProductSupplierResponse,
+)
 
 __all__ = [
     "HealthResponse",
@@ -36,6 +47,13 @@ __all__ = [
     "InventoryResponse",
     "InventoryTransactionCreate",
     "InventoryTransactionResponse",
+    "SupplierCreate",
+    "SupplierUpdate",
+    "SupplierResponse",
+    "SupplierSummary",
+    "ProductSupplierCreate",
+    "ProductSupplierUpdate",
+    "ProductSupplierResponse",
 ]
 
 

@@ -67,6 +67,13 @@ class Product(Base, TimestampMixin):
         cascade="all, delete-orphan",
     )
 
+    # 1-to-many relationship with supplier commercial offers
+    supplier_offers: Mapped[list["ProductSupplier"]] = relationship(
+        "ProductSupplier",
+        back_populates="product",
+        cascade="all, delete-orphan",
+    )
+
     def __repr__(self) -> str:
         return (
             f"<Product id={self.id} "
