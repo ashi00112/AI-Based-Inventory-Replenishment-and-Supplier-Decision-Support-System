@@ -8,6 +8,8 @@ from app.models.inventory_transaction import (
     InventoryTransactionType,
 )
 from app.models.sales_history import SalesHistory
+from app.models.supplier import Supplier
+from app.models.product_supplier import ProductSupplier
 
 __all__ = [
     "Base",
@@ -19,4 +21,6 @@ __all__ = [
     "InventoryTransaction",
     "InventoryTransactionType",
     "SalesHistory",
+    "Supplier",
+    "ProductSupplier",
 ]
