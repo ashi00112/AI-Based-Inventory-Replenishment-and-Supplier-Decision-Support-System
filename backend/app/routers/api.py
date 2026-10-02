@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from app.routers import auth, health, inventory, inventory_transactions, product
+from app.routers import auth, demand, health, inventory, inventory_transactions, product
 
 api_router = APIRouter()
 
@@ -14,10 +14,5 @@ api_router.include_router(
     tags=["Inventory Transactions"],
 )
 
-
-
-# Future agent routes to be added by team members:
-# Developer 1: api_router.include_router(inventory.router, prefix="/inventory", tags=["Inventory Monitoring"])
-# Developer 2: api_router.include_router(demand.router, prefix="/demand", tags=["Demand & Risk Analysis"])
-# Developer 3: api_router.include_router(supplier.router, prefix="/supplier", tags=["Supplier Intelligence"])
-# Developer 4: api_router.include_router(decision.router, prefix="/decision", tags=["Replenishment Decision"])
+# Agent routes
+api_router.include_router(demand.router, prefix="/demand", tags=["Demand & Risk Analysis"])
