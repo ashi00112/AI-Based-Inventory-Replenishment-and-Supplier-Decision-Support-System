@@ -62,6 +62,11 @@ class Settings(BaseSettings):
     FUZZY_MATCH_THRESHOLD: float = 75.0
     FUZZY_AMBIGUITY_MARGIN: float = 5.0
 
+    # Grok LLM configuration (Member 4 Decision Agent)
+    GROK_API_KEY: Union[str, None] = None
+    GROK_MODEL: str = "grok-beta"
+    GROK_API_BASE_URL: str = "https://api.x.ai/v1"
+
 
     @property
     def sync_database_url(self) -> str:
