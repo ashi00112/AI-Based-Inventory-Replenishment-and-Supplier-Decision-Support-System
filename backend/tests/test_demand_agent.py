@@ -410,3 +410,28 @@ def test_agent_selects_sma_model():
 
     # Tie selects SMA
     assert output["evaluation_metrics"]["selected_model"] == "Simple Moving Average"
+
+
+def test_agent_output_includes_m11_projected_stock_and_stockout_date():
+    """27. DemandRiskAgent returns projected_stock for each daily forecast and projected_stockout_date in risk metrics."""
+    agent = DemandRiskAgent()
+    # 20 days history (exceeds 14-day holdout validation requirement)
+    history = [
+        {"date": date(2026, 1, i), "quantity": 10.0}
+        for i in range(1, 21)
+    ]
+    context = {
+        "product_id": 1,
+        "historical_data": history,
+        "forecast_horizon_days": 5,
+        "lead_time_days": 2,
+        "current_available_stock": 25,  # 25 - 10 = 15, 15 - 10 = 5, 5 - 10 = -5 (stockout on day 3)
+    }
+    output = agent.run(context)
+
+    forecasts = output["daily_forecasts"]
+    assert len(forecasts) == 5
+    assert [f["projected_stock"] for f in forecasts] == [15.0, 5.0, -5.0, -15.0, -25.0]
+
+    risk = output["stockout_risk"]
+    assert risk["projected_stockout_date"] == date(2026, 1, 23)  # Day 3 date (2026-01-21 + 3 days)

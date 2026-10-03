@@ -149,6 +149,10 @@ class DailyForecastPoint(BaseModel):
         ge=0.0,
         description="Forecasted demand quantity (must be >= 0)",
     )
+    projected_stock: Optional[float] = Field(
+        default=None,
+        description="Projected available stock remaining at the end of this forecast day",
+    )
     confidence_interval_lower: Optional[float] = Field(
         default=None,
         ge=0.0,
@@ -192,7 +196,11 @@ class StockoutRiskMetrics(BaseModel):
     risk_level: str = Field(
         ...,
         min_length=1,
-        description="Categorical risk assessment level (e.g. LOW, MEDIUM, HIGH, CRITICAL)",
+        description="Categorical risk assessment level (LOW, MEDIUM, HIGH)",
+    )
+    projected_stockout_date: Optional[Date] = Field(
+        default=None,
+        description="First calendar date when projected stock is insufficient to satisfy forecasted demand",
     )
 
     model_config = ConfigDict(

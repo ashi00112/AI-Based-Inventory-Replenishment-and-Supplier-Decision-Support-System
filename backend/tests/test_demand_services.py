@@ -786,3 +786,103 @@ def test_select_best_forecast_model_tie_selects_sma():
 
     assert best_metrics.selected_model == "Simple Moving Average"
     assert best_metrics.mae == 0.0
+
+
+# --- Milestone 11: Projected Stock Trajectory & Stock-out Date Tests ---
+
+from app.services.demand_forecasting import calculate_projected_stock_trajectory
+
+
+def test_calculate_projected_stock_trajectory_no_stockout_ending_zero():
+    """65. Stock ending at exactly zero is satisfied and is NOT a stock-out."""
+    forecasts = [
+        DailyForecastPoint(date=date(2026, 2, i), forecasted_quantity=10.0)
+        for i in range(1, 4)
+    ]
+    enriched, stockout_date = calculate_projected_stock_trajectory(30, forecasts)
+
+    assert [pt.projected_stock for pt in enriched] == [20.0, 10.0, 0.0]
+    assert stockout_date is None
+
+
+def test_calculate_projected_stock_trajectory_stockout_midway():
+    """66. Projected stock-out is detected on the first day projected_stock becomes negative."""
+    forecasts = [
+        DailyForecastPoint(date=date(2026, 2, i), forecasted_quantity=10.0)
+        for i in range(1, 4)
+    ]
+    enriched, stockout_date = calculate_projected_stock_trajectory(25, forecasts)
+
+    assert [pt.projected_stock for pt in enriched] == [15.0, 5.0, -5.0]
+    assert stockout_date == date(2026, 2, 3)
+
+
+def test_calculate_projected_stock_trajectory_zero_starting_stock():
+    """67. Zero starting stock with positive demand causes stock-out on day 1."""
+    forecasts = [
+        DailyForecastPoint(date=date(2026, 2, i), forecasted_quantity=10.0)
+        for i in range(1, 3)
+    ]
+    enriched, stockout_date = calculate_projected_stock_trajectory(0, forecasts)
+
+    assert [pt.projected_stock for pt in enriched] == [-10.0, -20.0]
+    assert stockout_date == date(2026, 2, 1)
+
+
+def test_calculate_projected_stock_trajectory_all_zero_forecast():
+    """68. All-zero forecast demand maintains constant projected stock and returns None stockout_date."""
+    forecasts = [
+        DailyForecastPoint(date=date(2026, 2, i), forecasted_quantity=0.0)
+        for i in range(1, 4)
+    ]
+    enriched, stockout_date = calculate_projected_stock_trajectory(20, forecasts)
+
+    assert [pt.projected_stock for pt in enriched] == [20.0, 20.0, 20.0]
+    assert stockout_date is None
+
+
+def test_calculate_projected_stock_trajectory_fractional_and_4decimal():
+    """69. Fractional forecast quantities round projected stock deterministically to 4 decimal places."""
+    forecasts = [
+        DailyForecastPoint(date=date(2026, 2, i), forecasted_quantity=3.3333)
+        for i in range(1, 4)
+    ]
+    enriched, stockout_date = calculate_projected_stock_trajectory(10, forecasts)
+
+    assert [pt.projected_stock for pt in enriched] == [6.6667, 3.3334, 0.0001]
+    assert stockout_date is None
+
+
+def test_calculate_projected_stock_trajectory_first_stockout_date_preserved():
+    """70. First stock-out date remains the first date even as deficit deepens on subsequent days."""
+    forecasts = [
+        DailyForecastPoint(date=date(2026, 2, 1), forecasted_quantity=15.0),
+        DailyForecastPoint(date=date(2026, 2, 2), forecasted_quantity=20.0),
+    ]
+    enriched, stockout_date = calculate_projected_stock_trajectory(10, forecasts)
+
+    assert [pt.projected_stock for pt in enriched] == [-5.0, -25.0]
+    assert stockout_date == date(2026, 2, 1)
+
+
+def test_calculate_projected_stock_trajectory_no_stockout_returns_none():
+    """71. Sufficient stock across full horizon returns None for projected_stockout_date."""
+    forecasts = [
+        DailyForecastPoint(date=date(2026, 2, i), forecasted_quantity=10.0)
+        for i in range(1, 4)
+    ]
+    enriched, stockout_date = calculate_projected_stock_trajectory(100, forecasts)
+
+    assert [pt.projected_stock for pt in enriched] == [90.0, 80.0, 70.0]
+    assert stockout_date is None
+
+
+def test_calculate_projected_stock_trajectory_invalid_inputs():
+    """72. Rejects negative stock or empty daily forecast list."""
+    forecasts = [DailyForecastPoint(date=date(2026, 2, 1), forecasted_quantity=10.0)]
+
+    with pytest.raises(ValueError, match="cannot be negative"):
+        calculate_projected_stock_trajectory(-5, forecasts)
+
+    with pytest.raises(ValueError, match="cannot be empty"):
+        calculate_projected_stock_trajectory(10, [])

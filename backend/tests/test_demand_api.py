@@ -59,6 +59,8 @@ def test_api_analyze_demand_success(auth_client: TestClient):
     assert len(data["daily_forecasts"]) == 10
     assert "evaluation_metrics" in data
     assert "stockout_risk" in data
+    assert "projected_stockout_date" in data["stockout_risk"]
+    assert "projected_stock" in data["daily_forecasts"][0]
 
 
 def test_api_analyze_demand_unauthenticated(unauth_client: TestClient):

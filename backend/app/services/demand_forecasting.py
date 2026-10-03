@@ -1,5 +1,5 @@
 from datetime import date, timedelta
-from typing import List
+from typing import List, Optional, Tuple
 import numpy as np
 import pandas as pd
 
@@ -416,6 +416,7 @@ def calculate_expected_demand(
 def calculate_stockout_risk(
     current_available_stock: int,
     expected_demand_over_lead_time: float,
+    projected_stockout_date: Optional[date] = None,
 ) -> StockoutRiskMetrics:
     """
     Calculates deterministic stock-out risk level by comparing available stock against
@@ -430,6 +431,7 @@ def calculate_stockout_risk(
     Args:
         current_available_stock: Current available stock on hand (must be integer >= 0).
         expected_demand_over_lead_time: Cumulative expected demand over lead time (must be >= 0).
+        projected_stockout_date: Optional Date of first projected stock-out during horizon.
 
     Returns:
         StockoutRiskMetrics instance.
@@ -466,4 +468,70 @@ def calculate_stockout_risk(
         current_available_stock=current_available_stock,
         expected_demand_over_lead_time=round(d, 4),
         risk_level=risk_level,
+        projected_stockout_date=projected_stockout_date,
     )
+
+
+def calculate_projected_stock_trajectory(
+    current_available_stock: int,
+    daily_forecasts: List[DailyForecastPoint],
+) -> Tuple[List[DailyForecastPoint], Optional[date]]:
+    """
+    Calculates day-by-day projected stock trajectory and identifies the first projected stock-out date.
+
+    Contract:
+      - Uses current_available_stock as starting stock.
+      - For each day: projected_stock = previous_projected_stock - forecasted_quantity.
+      - Keeps projected_stock unfloored (negative values allowed to show deficit magnitude).
+      - Rounds projected_stock deterministically to 4 decimal places.
+      - The first day where projected_stock < 0 is projected_stockout_date.
+      - If projected_stock == 0 after satisfying that day's forecast, that day is NOT a stock-out day.
+      - If projected_stock never becomes negative, projected_stockout_date = None.
+
+    Args:
+        current_available_stock: Starting available inventory (int >= 0).
+        daily_forecasts: List of DailyForecastPoint objects ordered chronologically.
+
+    Returns:
+        Tuple containing:
+          - Enriched List[DailyForecastPoint] with populated projected_stock fields.
+          - projected_stockout_date (Optional[date]).
+
+    Raises:
+        ValueError: If current_available_stock is negative/not an int or daily_forecasts is empty.
+    """
+    if isinstance(current_available_stock, float):
+        if not current_available_stock.is_integer():
+            raise ValueError("Current available stock must be an integer.")
+        current_available_stock = int(current_available_stock)
+
+    if not isinstance(current_available_stock, int) or isinstance(current_available_stock, bool):
+        raise ValueError("Current available stock must be an integer.")
+
+    if current_available_stock < 0:
+        raise ValueError("Current available stock cannot be negative.")
+
+    if not daily_forecasts:
+        raise ValueError("Daily forecasts list cannot be empty.")
+
+    current_stock = float(current_available_stock)
+    enriched_forecasts: List[DailyForecastPoint] = []
+    first_stockout_date: Optional[date] = None
+
+    for pt in daily_forecasts:
+        current_stock = round(current_stock - float(pt.forecasted_quantity), 4)
+
+        if current_stock < 0.0 and first_stockout_date is None:
+            first_stockout_date = pt.date
+
+        enriched_forecasts.append(
+            DailyForecastPoint(
+                date=pt.date,
+                forecasted_quantity=pt.forecasted_quantity,
+                projected_stock=current_stock,
+                confidence_interval_lower=pt.confidence_interval_lower,
+                confidence_interval_upper=pt.confidence_interval_upper,
+            )
+        )
+
+    return enriched_forecasts, first_stockout_date

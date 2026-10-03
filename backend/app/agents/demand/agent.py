@@ -4,6 +4,7 @@ from app.agents.base import BaseAgent
 from app.schemas.demand import DemandAgentOutput, DemandDataPoint
 from app.services.demand_forecasting import (
     calculate_expected_demand,
+    calculate_projected_stock_trajectory,
     calculate_stockout_risk,
     generate_moving_average_forecast,
     generate_weekday_seasonal_forecast,
@@ -138,20 +139,27 @@ class DemandRiskAgent(BaseAgent):
         lead_time_forecasts = daily_forecasts[:lead_time_days]
         expected_demand_over_lead_time = calculate_expected_demand(lead_time_forecasts)
 
-        # 12. Calculate stock-out risk metrics
+        # 12. Calculate day-by-day projected stock trajectory and stock-out date
+        enriched_forecasts, projected_stockout_date = calculate_projected_stock_trajectory(
+            current_available_stock=current_available_stock,
+            daily_forecasts=daily_forecasts,
+        )
+
+        # 13. Calculate stock-out risk metrics over lead time
         stockout_risk = calculate_stockout_risk(
             current_available_stock=current_available_stock,
             expected_demand_over_lead_time=expected_demand_over_lead_time,
+            projected_stockout_date=projected_stockout_date,
         )
 
-        # 13. Construct output Pydantic model
+        # 14. Construct output Pydantic model
         output = DemandAgentOutput(
             product_id=product_id,
             forecast_horizon_days=forecast_horizon_days,
             total_forecasted_demand=total_forecasted_demand,
             evaluation_metrics=evaluation_metrics,
             stockout_risk=stockout_risk,
-            daily_forecasts=daily_forecasts,
+            daily_forecasts=enriched_forecasts,
         )
 
         return output.model_dump()
