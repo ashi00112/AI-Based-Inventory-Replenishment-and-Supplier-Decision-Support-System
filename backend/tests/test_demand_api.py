@@ -334,3 +334,147 @@ def test_api_analyze_demand_determinism(auth_client: TestClient):
     assert res1.status_code == 200
     assert res2.status_code == 200
     assert res1.json() == res2.json()
+
+
+# --- Milestone 13: DB-Backed Demand API Endpoint Tests ---
+
+from unittest.mock import patch
+from app.services.demand_integration_service import (
+    DemandIntegrationError,
+    NoSalesHistoryError,
+)
+from app.services.inventory_service import InventoryNotFoundError
+from app.services.product_service import ProductNotFoundError
+
+
+def test_api_analyze_product_demand_db_success(auth_client: TestClient):
+    """21. Valid request to POST /api/v1/demand/analyze/{product_id} returns 200 OK with full DemandAgentOutput."""
+    mock_agent_output = {
+        "product_id": 1,
+        "forecast_horizon_days": 10,
+        "total_forecasted_demand": 100.0,
+        "evaluation_metrics": {
+            "mae": 1.0,
+            "rmse": 1.25,
+            "mape": 5.0,
+            "selected_model": "Simple Moving Average",
+        },
+        "stockout_risk": {
+            "current_available_stock": 50,
+            "expected_demand_over_lead_time": 30.0,
+            "risk_level": "LOW",
+            "projected_stockout_date": "2026-10-05",
+        },
+        "daily_forecasts": [
+            {
+                "date": "2026-10-01",
+                "forecasted_quantity": 10.0,
+                "projected_stock": 40.0,
+                "confidence_interval_lower": 7.55,
+                "confidence_interval_upper": 12.45,
+            }
+        ],
+    }
+
+    payload = {
+        "forecast_horizon_days": 10,
+        "lead_time_days": 3,
+    }
+
+    with patch("app.routers.demand.analyze_product_demand_from_db", return_value=mock_agent_output):
+        response = auth_client.post("/api/v1/demand/analyze/1", json=payload)
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["product_id"] == 1
+    assert data["forecast_horizon_days"] == 10
+    assert data["total_forecasted_demand"] == 100.0
+    assert data["evaluation_metrics"]["selected_model"] == "Simple Moving Average"
+    assert data["stockout_risk"]["risk_level"] == "LOW"
+    assert data["stockout_risk"]["projected_stockout_date"] == "2026-10-05"
+    assert data["daily_forecasts"][0]["projected_stock"] == 40.0
+    assert data["daily_forecasts"][0]["confidence_interval_lower"] == 7.55
+    assert data["daily_forecasts"][0]["confidence_interval_upper"] == 12.45
+
+
+def test_api_analyze_product_demand_db_rejects_disallowed_manual_payload_fields(auth_client: TestClient):
+    """22. Rejects request containing disallowed manual historical_data or stock payload fields."""
+    payload = {
+        "forecast_horizon_days": 10,
+        "lead_time_days": 3,
+        "historical_data": [],  # Disallowed extra field
+    }
+    response = auth_client.post("/api/v1/demand/analyze/1", json=payload)
+    assert response.status_code == 422
+
+
+def test_api_analyze_product_demand_db_product_not_found(auth_client: TestClient):
+    """23. Missing product ID returns 404 Not Found."""
+    payload = {"forecast_horizon_days": 10, "lead_time_days": 3}
+    with patch(
+        "app.routers.demand.analyze_product_demand_from_db",
+        side_effect=ProductNotFoundError("Product with ID 999 not found."),
+    ):
+        response = auth_client.post("/api/v1/demand/analyze/999", json=payload)
+
+    assert response.status_code == 404
+    assert "Product with ID 999 not found" in response.json()["detail"]
+
+
+def test_api_analyze_product_demand_db_inventory_not_found(auth_client: TestClient):
+    """24. Missing inventory record for product returns 404 Not Found."""
+    payload = {"forecast_horizon_days": 10, "lead_time_days": 3}
+    with patch(
+        "app.routers.demand.analyze_product_demand_from_db",
+        side_effect=InventoryNotFoundError("Inventory record not found for product ID 1."),
+    ):
+        response = auth_client.post("/api/v1/demand/analyze/1", json=payload)
+
+    assert response.status_code == 404
+    assert "Inventory record not found" in response.json()["detail"]
+
+
+def test_api_analyze_product_demand_db_no_sales_history(auth_client: TestClient):
+    """25. Product with no sales history records returns 404 Not Found."""
+    payload = {"forecast_horizon_days": 10, "lead_time_days": 3}
+    with patch(
+        "app.routers.demand.analyze_product_demand_from_db",
+        side_effect=NoSalesHistoryError("No sales history records found for product ID 1."),
+    ):
+        response = auth_client.post("/api/v1/demand/analyze/1", json=payload)
+
+    assert response.status_code == 404
+    assert "No sales history records found" in response.json()["detail"]
+
+
+def test_api_analyze_product_demand_db_insufficient_history(auth_client: TestClient):
+    """26. Product with insufficient history (<= 14 days) returns 400 Bad Request."""
+    payload = {"forecast_horizon_days": 10, "lead_time_days": 3}
+    with patch(
+        "app.routers.demand.analyze_product_demand_from_db",
+        side_effect=ValueError("Historical data length (10) must be greater than validation_days (14)."),
+    ):
+        response = auth_client.post("/api/v1/demand/analyze/1", json=payload)
+
+    assert response.status_code == 400
+    assert "must be greater than validation_days" in response.json()["detail"]
+
+
+def test_api_analyze_product_demand_db_lead_time_exceeds_horizon(auth_client: TestClient):
+    """27. Lead time exceeding forecast horizon returns 400 Bad Request."""
+    payload = {"forecast_horizon_days": 3, "lead_time_days": 10}
+    with patch(
+        "app.routers.demand.analyze_product_demand_from_db",
+        side_effect=ValueError("lead_time_days cannot exceed forecast_horizon_days."),
+    ):
+        response = auth_client.post("/api/v1/demand/analyze/1", json=payload)
+
+    assert response.status_code == 400
+    assert "lead_time_days cannot exceed forecast_horizon_days" in response.json()["detail"]
+
+
+def test_api_analyze_product_demand_db_unauthenticated(unauth_client: TestClient):
+    """28. Unauthenticated request to DB-backed endpoint returns 401 Unauthorized."""
+    payload = {"forecast_horizon_days": 10, "lead_time_days": 3}
+    response = unauth_client.post("/api/v1/demand/analyze/1", json=payload)
+    assert response.status_code == 401

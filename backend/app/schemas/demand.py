@@ -120,6 +120,33 @@ class DemandAnalysisRequest(BaseModel):
     )
 
 
+class DemandAnalysisDBRequest(BaseModel):
+    """
+    HTTP Request payload schema for database-backed demand analysis and stock-out risk assessment.
+    Historical sales data and current available stock levels are automatically loaded from the database.
+    """
+    forecast_horizon_days: int = Field(
+        ...,
+        gt=0,
+        description="Number of future days to forecast (must be > 0)",
+    )
+    lead_time_days: int = Field(
+        ...,
+        gt=0,
+        description="Supplier delivery lead time in days (must be > 0)",
+    )
+
+    model_config = ConfigDict(
+        extra="forbid",
+        json_schema_extra={
+            "example": {
+                "forecast_horizon_days": 10,
+                "lead_time_days": 3,
+            }
+        },
+    )
+
+
 class EvaluationMetrics(BaseModel):
     """
     Statistical accuracy metrics for backtesting and model evaluation.
