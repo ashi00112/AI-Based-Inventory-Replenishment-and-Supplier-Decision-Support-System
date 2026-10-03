@@ -1,4 +1,5 @@
 from datetime import date, timedelta
+import math
 from typing import List, Optional, Tuple
 import numpy as np
 import pandas as pd
@@ -535,3 +536,62 @@ def calculate_projected_stock_trajectory(
         )
 
     return enriched_forecasts, first_stockout_date
+
+
+def calculate_forecast_uncertainty_intervals(
+    daily_forecasts: List[DailyForecastPoint],
+    rmse: float,
+    z_score: float = 1.96,
+) -> List[DailyForecastPoint]:
+    """
+    Calculates statistical forecast uncertainty bounds (confidence/prediction intervals) around daily point forecasts.
+
+    Formula:
+      margin = z_score * rmse
+      lower = max(0.0, round(forecasted_quantity - margin, 4))
+      upper = round(forecasted_quantity + margin, 4)
+
+    Args:
+        daily_forecasts: List of DailyForecastPoint objects.
+        rmse: Holdout validation RMSE of selected model (float >= 0.0).
+        z_score: Multiplier for prediction interval coverage (default: 1.96, float > 0.0).
+
+    Returns:
+        List of DailyForecastPoint objects populated with confidence_interval_lower and confidence_interval_upper.
+
+    Raises:
+        ValueError: If daily_forecasts is empty, or if rmse/z_score is invalid or not finite.
+    """
+    if not daily_forecasts:
+        raise ValueError("Daily forecasts list cannot be empty.")
+
+    if isinstance(rmse, bool) or not isinstance(rmse, (int, float)):
+        raise ValueError("RMSE must be a numeric value.")
+    rmse_val = float(rmse)
+    if math.isnan(rmse_val) or math.isinf(rmse_val) or rmse_val < 0.0:
+        raise ValueError("RMSE must be a finite, non-negative number.")
+
+    if isinstance(z_score, bool) or not isinstance(z_score, (int, float)):
+        raise ValueError("Z-score must be a numeric value.")
+    z_val = float(z_score)
+    if math.isnan(z_val) or math.isinf(z_val) or z_val <= 0.0:
+        raise ValueError("Z-score must be a finite, positive number greater than 0.")
+
+    margin = z_val * rmse_val
+    uncertainty_forecasts: List[DailyForecastPoint] = []
+
+    for pt in daily_forecasts:
+        lower = max(0.0, round(float(pt.forecasted_quantity) - margin, 4))
+        upper = round(float(pt.forecasted_quantity) + margin, 4)
+
+        uncertainty_forecasts.append(
+            DailyForecastPoint(
+                date=pt.date,
+                forecasted_quantity=pt.forecasted_quantity,
+                projected_stock=pt.projected_stock,
+                confidence_interval_lower=lower,
+                confidence_interval_upper=upper,
+            )
+        )
+
+    return uncertainty_forecasts

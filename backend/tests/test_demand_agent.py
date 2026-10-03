@@ -435,3 +435,29 @@ def test_agent_output_includes_m11_projected_stock_and_stockout_date():
 
     risk = output["stockout_risk"]
     assert risk["projected_stockout_date"] == date(2026, 1, 23)  # Day 3 date (2026-01-21 + 3 days)
+
+
+def test_agent_output_includes_m12_uncertainty_bounds():
+    """28. DemandRiskAgent populates non-null confidence_interval_lower and confidence_interval_upper for all daily forecasts using selected model RMSE."""
+    agent = DemandRiskAgent()
+    history = [
+        {"date": date(2026, 1, i), "quantity": 10.0}
+        for i in range(1, 21)
+    ]
+    context = {
+        "product_id": 1,
+        "historical_data": history,
+        "forecast_horizon_days": 5,
+        "lead_time_days": 2,
+        "current_available_stock": 50,
+    }
+    output = agent.run(context)
+
+    forecasts = output["daily_forecasts"]
+    rmse = output["evaluation_metrics"]["rmse"]  # For flat series 10.0, RMSE = 0.0
+
+    for f in forecasts:
+        assert f["confidence_interval_lower"] is not None
+        assert f["confidence_interval_upper"] is not None
+        assert f["confidence_interval_lower"] == round(max(0.0, f["forecasted_quantity"] - 1.96 * rmse), 4)
+        assert f["confidence_interval_upper"] == round(f["forecasted_quantity"] + 1.96 * rmse, 4)

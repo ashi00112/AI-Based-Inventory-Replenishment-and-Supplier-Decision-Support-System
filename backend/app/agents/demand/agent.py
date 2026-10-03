@@ -4,6 +4,7 @@ from app.agents.base import BaseAgent
 from app.schemas.demand import DemandAgentOutput, DemandDataPoint
 from app.services.demand_forecasting import (
     calculate_expected_demand,
+    calculate_forecast_uncertainty_intervals,
     calculate_projected_stock_trajectory,
     calculate_stockout_risk,
     generate_moving_average_forecast,
@@ -152,14 +153,20 @@ class DemandRiskAgent(BaseAgent):
             projected_stockout_date=projected_stockout_date,
         )
 
-        # 14. Construct output Pydantic model
+        # 14. Calculate statistical forecast uncertainty bounds using selected model RMSE
+        final_daily_forecasts = calculate_forecast_uncertainty_intervals(
+            daily_forecasts=enriched_forecasts,
+            rmse=evaluation_metrics.rmse,
+        )
+
+        # 15. Construct output Pydantic model
         output = DemandAgentOutput(
             product_id=product_id,
             forecast_horizon_days=forecast_horizon_days,
             total_forecasted_demand=total_forecasted_demand,
             evaluation_metrics=evaluation_metrics,
             stockout_risk=stockout_risk,
-            daily_forecasts=enriched_forecasts,
+            daily_forecasts=final_daily_forecasts,
         )
 
         return output.model_dump()

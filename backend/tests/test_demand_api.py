@@ -61,6 +61,8 @@ def test_api_analyze_demand_success(auth_client: TestClient):
     assert "stockout_risk" in data
     assert "projected_stockout_date" in data["stockout_risk"]
     assert "projected_stock" in data["daily_forecasts"][0]
+    assert data["daily_forecasts"][0]["confidence_interval_lower"] is not None
+    assert data["daily_forecasts"][0]["confidence_interval_upper"] is not None
 
 
 def test_api_analyze_demand_unauthenticated(unauth_client: TestClient):

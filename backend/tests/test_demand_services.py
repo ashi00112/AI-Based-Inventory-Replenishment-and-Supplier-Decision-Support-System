@@ -886,3 +886,85 @@ def test_calculate_projected_stock_trajectory_invalid_inputs():
 
     with pytest.raises(ValueError, match="cannot be empty"):
         calculate_projected_stock_trajectory(10, [])
+
+
+# --- Milestone 12: Forecast Uncertainty Intervals Tests ---
+
+from app.services.demand_forecasting import calculate_forecast_uncertainty_intervals
+
+
+def test_calculate_forecast_uncertainty_intervals_normal():
+    """73. Calculates deterministic 95% uncertainty interval bounds around point forecast."""
+    forecasts = [
+        DailyForecastPoint(date=date(2026, 2, 1), forecasted_quantity=20.0, projected_stock=10.0)
+    ]
+    # Margin = 1.96 * 2.0 = 3.92 -> lower = 16.08, upper = 23.92
+    results = calculate_forecast_uncertainty_intervals(forecasts, rmse=2.0)
+
+    assert results[0].confidence_interval_lower == 16.08
+    assert results[0].confidence_interval_upper == 23.92
+    assert results[0].forecasted_quantity == 20.0
+    assert results[0].projected_stock == 10.0
+
+
+def test_calculate_forecast_uncertainty_intervals_lower_floored_at_zero():
+    """74. Lower uncertainty bound is floored at 0.0 when (forecast - margin) is negative."""
+    forecasts = [
+        DailyForecastPoint(date=date(2026, 2, 1), forecasted_quantity=2.0)
+    ]
+    # Margin = 1.96 * 5.0 = 9.8 -> lower = max(0.0, 2.0 - 9.8) = 0.0, upper = 11.8
+    results = calculate_forecast_uncertainty_intervals(forecasts, rmse=5.0)
+
+    assert results[0].confidence_interval_lower == 0.0
+    assert results[0].confidence_interval_upper == 11.8
+
+
+def test_calculate_forecast_uncertainty_intervals_zero_rmse():
+    """75. Zero RMSE results in lower and upper bounds exactly matching the point forecast."""
+    forecasts = [
+        DailyForecastPoint(date=date(2026, 2, 1), forecasted_quantity=15.0)
+    ]
+    results = calculate_forecast_uncertainty_intervals(forecasts, rmse=0.0)
+
+    assert results[0].confidence_interval_lower == 15.0
+    assert results[0].confidence_interval_upper == 15.0
+
+
+def test_calculate_forecast_uncertainty_intervals_preserves_projected_stock():
+    """76. Uncertainty enrichment preserves existing date, forecasted_quantity, and projected_stock."""
+    forecasts = [
+        DailyForecastPoint(date=date(2026, 2, 1), forecasted_quantity=10.0, projected_stock=5.0)
+    ]
+    results = calculate_forecast_uncertainty_intervals(forecasts, rmse=1.0)
+
+    assert results[0].date == date(2026, 2, 1)
+    assert results[0].forecasted_quantity == 10.0
+    assert results[0].projected_stock == 5.0
+    assert results[0].confidence_interval_lower == 8.04
+    assert results[0].confidence_interval_upper == 11.96
+
+
+def test_calculate_forecast_uncertainty_intervals_fractional_4decimal():
+    """77. Fractional forecast values round bounds deterministically to 4 decimal places."""
+    forecasts = [
+        DailyForecastPoint(date=date(2026, 2, 1), forecasted_quantity=10.3333)
+    ]
+    # Margin = 1.96 * 1.2345 = 2.41962 -> lower = 10.3333 - 2.41962 = 7.91368 -> 7.9137, upper = 12.75292 -> 12.7529
+    results = calculate_forecast_uncertainty_intervals(forecasts, rmse=1.2345)
+
+    assert results[0].confidence_interval_lower == 7.9137
+    assert results[0].confidence_interval_upper == 12.7529
+
+
+def test_calculate_forecast_uncertainty_intervals_invalid_inputs():
+    """78. Rejects empty forecast list, negative RMSE, or invalid z_score."""
+    forecasts = [DailyForecastPoint(date=date(2026, 2, 1), forecasted_quantity=10.0)]
+
+    with pytest.raises(ValueError, match="cannot be empty"):
+        calculate_forecast_uncertainty_intervals([], rmse=1.0)
+
+    with pytest.raises(ValueError, match="RMSE must be a finite, non-negative number"):
+        calculate_forecast_uncertainty_intervals(forecasts, rmse=-1.0)
+
+    with pytest.raises(ValueError, match="Z-score must be a finite, positive number"):
+        calculate_forecast_uncertainty_intervals(forecasts, rmse=1.0, z_score=0.0)
