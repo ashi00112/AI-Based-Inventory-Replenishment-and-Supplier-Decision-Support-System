@@ -11,6 +11,7 @@ from app.models.sales_history import SalesHistory
 from app.models.supplier import Supplier
 from app.models.product_supplier import ProductSupplier
 from app.models.document import Document, DocumentType
+from app.models.decision import DecisionRecommendation, ApprovalStatus
 
 __all__ = [
     "Base",
@@ -26,5 +27,7 @@ __all__ = [
     "ProductSupplier",
     "Document",
     "DocumentType",
+    "DecisionRecommendation",
+    "ApprovalStatus",
 ]
 

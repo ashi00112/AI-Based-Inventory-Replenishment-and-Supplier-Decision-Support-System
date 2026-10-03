@@ -13,6 +13,7 @@ from app.routers import (
     supplier_agent,
     supplier_knowledge,
     suppliers,
+    decision,
 )
 
 api_router = APIRouter()
@@ -81,4 +82,10 @@ api_router.include_router(
     demand.router,
     prefix="/demand",
     tags=["Demand & Risk Analysis"],
+)
+
+# Member 4 Replenishment Decision Agent routes
+api_router.include_router(
+    decision.router,
+    tags=["Decision Agent"],
 )
