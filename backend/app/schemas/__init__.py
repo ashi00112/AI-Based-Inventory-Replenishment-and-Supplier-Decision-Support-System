@@ -30,6 +30,7 @@ from app.schemas.product_supplier import (
     ProductSupplierUpdate,
     ProductSupplierResponse,
 )
+from app.schemas.document import DocumentResponse, DocumentUpdate
 
 __all__ = [
     "HealthResponse",
@@ -54,6 +55,9 @@ __all__ = [
     "ProductSupplierCreate",
     "ProductSupplierUpdate",
     "ProductSupplierResponse",
+    "DocumentResponse",
+    "DocumentUpdate",
 ]
+
 
 

@@ -6,6 +6,7 @@ import {
   Boxes,
   ArrowRightLeft,
   Truck,
+  FileText,
   LogOut,
   Menu,
   X,
@@ -18,7 +19,9 @@ const navLinks = [
   { to: '/inventory', label: 'Inventory', icon: Boxes },
   { to: '/transactions', label: 'Transactions', icon: ArrowRightLeft },
   { to: '/suppliers', label: 'Suppliers', icon: Truck },
+  { to: '/documents', label: 'Documents', icon: FileText },
 ];
+
 
 export default function Navbar() {
   const { user, logout } = useAuth();

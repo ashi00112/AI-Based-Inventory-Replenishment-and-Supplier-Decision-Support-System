@@ -7,6 +7,7 @@ from app.models.base import TimestampMixin
 
 if TYPE_CHECKING:
     from app.models.product_supplier import ProductSupplier
+    from app.models.document import Document
 
 
 class Supplier(Base, TimestampMixin):
@@ -66,6 +67,12 @@ class Supplier(Base, TimestampMixin):
         "ProductSupplier",
         back_populates="supplier",
         cascade="all, delete-orphan",
+    )
+
+    # 1-to-many relationship with procurement and vendor documents
+    documents: Mapped[list["Document"]] = relationship(
+        "Document",
+        back_populates="supplier",
     )
 
     def __repr__(self) -> str:

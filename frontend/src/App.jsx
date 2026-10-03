@@ -7,6 +7,7 @@ import Products from './pages/Products';
 import Inventory from './pages/Inventory';
 import Transactions from './pages/Transactions';
 import Suppliers from './pages/Suppliers';
+import Documents from './pages/Documents';
 import ProtectedRoute from './components/ProtectedRoute';
 import PublicOnlyRoute from './components/PublicOnlyRoute';
 
@@ -50,6 +51,14 @@ export default function App() {
         element={
           <ProtectedRoute>
             <Suppliers />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/documents"
+        element={
+          <ProtectedRoute>
+            <Documents />
           </ProtectedRoute>
         }
       />

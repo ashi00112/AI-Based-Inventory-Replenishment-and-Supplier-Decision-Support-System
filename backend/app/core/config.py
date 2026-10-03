@@ -42,6 +42,26 @@ class Settings(BaseSettings):
     JWT_ALGORITHM: str = "HS256"
     JWT_ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
 
+    # Document Storage & Upload Limits
+    DOCUMENT_STORAGE_DIR: str = os.path.join(
+        os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "storage", "documents"
+    )
+    MAX_PDF_UPLOAD_SIZE_MB: int = 10
+    # Embedding and vector store configuration
+    EMBEDDING_MODEL_NAME: str = "sentence-transformers/all-MiniLM-L6-v2"
+    CHROMA_PERSIST_DIR: str = os.path.join(
+        os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "storage", "chroma"
+    )
+    CHROMA_COLLECTION_NAME: str = "smartsupply_documents"
+    DOCUMENT_INDEX_VERSION: str = "v1"
+
+    # LLM & Member 3 Supplier Agent configuration
+    GEMINI_API_KEY: Union[str, None] = None
+    LLM_MODEL_NAME: str = "gemini-1.5-flash"
+    LLM_TIMEOUT_SECONDS: int = 15
+    FUZZY_MATCH_THRESHOLD: float = 75.0
+    FUZZY_AMBIGUITY_MARGIN: float = 5.0
+
 
     @property
     def sync_database_url(self) -> str:

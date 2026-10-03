@@ -10,6 +10,7 @@ from app.models.inventory_transaction import (
 from app.models.sales_history import SalesHistory
 from app.models.supplier import Supplier
 from app.models.product_supplier import ProductSupplier
+from app.models.document import Document, DocumentType
 
 __all__ = [
     "Base",
@@ -23,4 +24,7 @@ __all__ = [
     "SalesHistory",
     "Supplier",
     "ProductSupplier",
+    "Document",
+    "DocumentType",
 ]
+

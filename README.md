@@ -303,3 +303,25 @@ python -m backend.scripts.seed_demo_data --reset-demo
 - **Atomic & Ledger-Consistent**: Every `SALE` event atomically creates linked `InventoryTransaction` and `SalesHistory` records. Ledger formula `initial + RESTOCK + RETURN + pos_ADJ - SALE - neg_ADJ == final on_hand` is strictly validated.
 - **Realistic Commercial Offers**: ProductSupplier entries feature realistic LKR margins, trade-offs between unit cost, MOQ, and lead times across 4 suppliers.
 
+---
+
+## Document Management & PDF Upload
+
+SmartSupply AI provides a secure document management subsystem for company procurement policies, vendor contracts, and supplier SLAs.
+
+### Supported Document Types
+- `procurement_policy`: General company procurement policy (company-wide; supplier is not linked).
+- `inventory_replenishment_policy`: Inventory replenishment threshold rules (company-wide; supplier is not linked).
+- `supplier_sla`: Service Level Agreement (supplier linkage is required).
+- `supplier_contract`: Commercial vendor contract (supplier linkage is required).
+- `supplier_performance_report`: Periodic vendor evaluation report (supplier linkage is required).
+- `other`: Supporting procurement documents (supplier linkage is optional).
+
+### Security & Storage Architecture
+- **Upload Validation**: Strictly accepts files with `.pdf` extension, `application/pdf` MIME type, non-zero file length, and valid `%PDF-` magic byte header.
+- **Upload Size Limit**: Configurable via `MAX_PDF_UPLOAD_SIZE_MB` (default: 10 MB).
+- **Secure File Storage**: Files are saved in `backend/storage/documents/` using random UUID filenames (`<uuid4>.pdf`) as `storage_key`. Original user filenames are preserved as metadata for safe display and downloads.
+- **Git Ignored**: Runtime files in `backend/storage/documents/*` are gitignored to prevent binary file commits while preserving `.gitkeep`.
+- **Integrity**: Every upload computes a SHA-256 digest on-the-fly and verifies path traversal security.
+- **Metadata Only**: Documents currently store physical files and metadata. Text parsing, chunking, vector embeddings, ChromaDB indexing, and RAG/LLM retrieval are not implemented at this stage and will be integrated into the upcoming Supplier Agent phase.
+
