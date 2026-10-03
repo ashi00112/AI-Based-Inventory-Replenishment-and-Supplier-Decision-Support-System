@@ -415,7 +415,24 @@ export default function Dashboard() {
             System Modules & Workflows
           </h3>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-xs">
+            {/* Decision Agent Card */}
+            <Link
+              to="/decisions"
+              className="p-5 rounded-2xl bg-neutral-900/30 hover:bg-neutral-900/50 border border-violet-500/20 hover:border-violet-500/40 transition group space-y-2 block"
+            >
+              <div className="flex items-center justify-between">
+                <div className="p-2.5 bg-violet-500/10 rounded-xl text-violet-400 group-hover:scale-105 transition">
+                  <Sparkles className="w-4 h-4" />
+                </div>
+                <ArrowUpRight className="w-4 h-4 text-neutral-600 group-hover:text-violet-400 transition" />
+              </div>
+              <h4 className="font-semibold text-white text-sm">Decision Agent</h4>
+              <p className="text-neutral-500 text-xs leading-relaxed">
+                Run multi-agent synthesis & Grok AI reasoning for optimal replenishment and supplier decisions.
+              </p>
+            </Link>
+
             {/* Products Card */}
             <Link
               to="/products"

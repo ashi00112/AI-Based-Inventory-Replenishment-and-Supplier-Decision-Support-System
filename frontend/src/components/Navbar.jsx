@@ -7,6 +7,7 @@ import {
   ArrowRightLeft,
   Truck,
   FileText,
+  Sparkles,
   LogOut,
   Menu,
   X,
@@ -20,6 +21,7 @@ const navLinks = [
   { to: '/transactions', label: 'Transactions', icon: ArrowRightLeft },
   { to: '/suppliers', label: 'Suppliers', icon: Truck },
   { to: '/documents', label: 'Documents', icon: FileText },
+  { to: '/decisions', label: 'Decisions', icon: Sparkles },
 ];
 
 
