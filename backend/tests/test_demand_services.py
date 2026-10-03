@@ -1,4 +1,11 @@
-from datetime import date
+
+
+
+
+
+
+
+from datetime import date, timedelta
 import pytest
 
 from app.schemas.demand import DailyDemandPoint, DailyForecastPoint, DemandDataPoint
@@ -8,8 +15,11 @@ from app.services.demand_forecasting import (
     calculate_forecast_metrics,
     calculate_stockout_risk,
     evaluate_moving_average_forecast,
+    evaluate_weekday_seasonal_forecast,
     generate_moving_average_forecast,
+    generate_weekday_seasonal_forecast,
     preprocess_demand_data,
+    select_best_forecast_model,
 )
 
 
@@ -615,3 +625,164 @@ def test_stockout_risk_determinism():
     assert r1.risk_level == r2.risk_level
     assert r1.current_available_stock == r2.current_available_stock
     assert r1.expected_demand_over_lead_time == r2.expected_demand_over_lead_time
+
+
+# =====================================================================
+# MILESTONE 9 TESTS — SEASONAL FORECASTING & MODEL SELECTION
+# =====================================================================
+
+
+def test_generate_weekday_seasonal_forecast_pattern():
+    """56. Weekday seasonal forecast uses historical observations of matching weekdays."""
+    # 28 days total (4 full weeks): Mon Jan 5 2026 to Sun Feb 1 2026
+    # Mondays (Jan 5, 12, 19, 26) have demand 10.0
+    # Other days (Tue-Sun) have demand 50.0
+    cleaned_history = []
+    for i in range(28):
+        current_date = date(2026, 1, 5) + timedelta(days=i)
+        qty = 10.0 if current_date.weekday() == 0 else 50.0
+        cleaned_history.append(DailyDemandPoint(date=current_date, quantity=qty))
+
+    # Forecast 7 days into future (Mon Feb 2 to Sun Feb 8 2026)
+    forecasts = generate_weekday_seasonal_forecast(cleaned_history, forecast_horizon_days=7)
+
+    assert len(forecasts) == 7
+    assert forecasts[0].date == date(2026, 2, 2)  # Monday
+    assert forecasts[0].forecasted_quantity == 10.0  # Monday average
+    assert forecasts[1].date == date(2026, 2, 3)  # Tuesday
+    assert forecasts[1].forecasted_quantity == 50.0  # Tuesday average
+    assert forecasts[5].date == date(2026, 2, 7)  # Saturday
+    assert forecasts[5].forecasted_quantity == 50.0  # Saturday average
+
+
+def test_generate_weekday_seasonal_forecast_lookback_limit():
+    """57. Weekday seasonal forecast respects seasonal_lookback_weeks limit (averages at most N recent same-weekdays)."""
+    # 10 weeks of history (70 days)
+    # Mondays in weeks 1-2 (Jan 5, Jan 12): demand 100.0
+    # Mondays in weeks 3-10 (Jan 19 through Mar 9): demand 10.0
+    cleaned_history = []
+    start = date(2026, 1, 5)
+    for i in range(70):
+        current_date = start + timedelta(days=i)
+        if current_date.weekday() == 0:
+            qty = 100.0 if i < 14 else 10.0
+        else:
+            qty = 20.0
+        cleaned_history.append(DailyDemandPoint(date=current_date, quantity=qty))
+
+    # Lookback = 8 -> uses last 8 Mondays (weeks 3-10, all 10.0) -> mean = 10.0
+    forecasts = generate_weekday_seasonal_forecast(
+        cleaned_history,
+        forecast_horizon_days=7,
+        seasonal_lookback_weeks=8,
+    )
+
+    assert forecasts[0].forecasted_quantity == 10.0
+
+
+def test_generate_weekday_seasonal_forecast_fallback_to_sma():
+    """58. Fallback to SMA occurs when fewer than 2 same-weekday observations exist."""
+    # 3 days history (Mon, Tue, Wed)
+    cleaned_history = [
+        DailyDemandPoint(date=date(2026, 1, 5), quantity=10.0),  # Mon
+        DailyDemandPoint(date=date(2026, 1, 6), quantity=20.0),  # Tue
+        DailyDemandPoint(date=date(2026, 1, 7), quantity=30.0),  # Wed
+    ]
+    # Forecast 3 days (Thu, Fri, Sat) -> each has 0 historical observations (< 2)
+    # Fallback to SMA average of 3 days: (10 + 20 + 30) / 3 = 20.0
+    forecasts = generate_weekday_seasonal_forecast(cleaned_history, forecast_horizon_days=3)
+
+    assert len(forecasts) == 3
+    for f in forecasts:
+        assert f.forecasted_quantity == 20.0
+
+
+def test_generate_weekday_seasonal_forecast_invalid_inputs():
+    """59. Rejects empty history, non-positive horizon, and non-positive lookback."""
+    history = [DailyDemandPoint(date=date(2026, 1, 1), quantity=10.0)]
+
+    with pytest.raises(ValueError, match="Cleaned demand series cannot be empty"):
+        generate_weekday_seasonal_forecast([], forecast_horizon_days=5)
+
+    with pytest.raises(ValueError, match="Forecast horizon days must be greater than 0"):
+        generate_weekday_seasonal_forecast(history, forecast_horizon_days=0)
+
+    with pytest.raises(ValueError, match="Seasonal lookback weeks must be greater than 0"):
+        generate_weekday_seasonal_forecast(history, forecast_horizon_days=5, seasonal_lookback_weeks=0)
+
+
+def test_evaluate_weekday_seasonal_forecast_holdout():
+    """60. Evaluates weekday seasonal model using deterministic 14-day holdout split."""
+    # 28 days total (4 weeks): training = first 14 days, validation = last 14 days
+    # Mon=10.0, Tue-Sun=50.0 pattern across full history
+    cleaned_history = []
+    for i in range(28):
+        current_date = date(2026, 1, 5) + timedelta(days=i)
+        qty = 10.0 if current_date.weekday() == 0 else 50.0
+        cleaned_history.append(DailyDemandPoint(date=current_date, quantity=qty))
+
+    metrics = evaluate_weekday_seasonal_forecast(cleaned_history, validation_days=14)
+
+    assert metrics.selected_model == "Weekday Seasonal Moving Average"
+    assert metrics.mae == 0.0
+    assert metrics.rmse == 0.0
+    assert metrics.mape == 0.0
+
+
+def test_evaluate_weekday_seasonal_forecast_invalid_inputs():
+    """61. Rejects invalid validation_days and short history in seasonal evaluation."""
+    history = [DailyDemandPoint(date=date(2026, 1, i), quantity=10.0) for i in range(1, 10)]
+
+    with pytest.raises(ValueError, match="Validation days must be greater than 0"):
+        evaluate_weekday_seasonal_forecast(history, validation_days=0)
+
+    with pytest.raises(ValueError, match="Historical data length must be greater than validation_days"):
+        evaluate_weekday_seasonal_forecast(history, validation_days=14)
+
+
+def test_select_best_forecast_model_seasonal_selected():
+    """62. Selects Weekday Seasonal Moving Average when its holdout MAE is lower than SMA MAE."""
+    # Strong weekly pattern over 28 days: Mon=10, Tue-Sun=50
+    cleaned_history = []
+    for i in range(28):
+        current_date = date(2026, 1, 5) + timedelta(days=i)
+        qty = 10.0 if current_date.weekday() == 0 else 50.0
+        cleaned_history.append(DailyDemandPoint(date=current_date, quantity=qty))
+
+    # Holdout validation (last 14 days):
+    # Weekday seasonal captures exact Mon vs Tue-Sun pattern -> MAE = 0.0
+    # SMA 7-day averages across Mon+Tue-Sun -> SMA MAE > 0.0
+    best_metrics = select_best_forecast_model(cleaned_history, validation_days=14)
+
+    assert best_metrics.selected_model == "Weekday Seasonal Moving Average"
+    assert best_metrics.mae == 0.0
+
+
+def test_select_best_forecast_model_sma_selected():
+    """63. Selects Simple Moving Average when SMA holdout MAE is lower than Weekday Seasonal MAE."""
+    # 28 days with a recent sharp step increase:
+    # Days 1-21 = 10.0, Days 22-28 = 50.0
+    cleaned_history = [
+        DailyDemandPoint(date=date(2026, 1, i), quantity=10.0 if i <= 21 else 50.0)
+        for i in range(1, 29)
+    ]
+
+    # SMA (7-day window) adapts quickly to recent 50.0 level
+    # Weekday seasonal lookback averages historical same-weekdays (10.0 from earlier weeks), underperforming
+    best_metrics = select_best_forecast_model(cleaned_history, validation_days=14)
+
+    assert best_metrics.selected_model == "Simple Moving Average"
+
+
+def test_select_best_forecast_model_tie_selects_sma():
+    """64. Tie-breaking rule selects Simple Moving Average when both models have equal MAE."""
+    # 28 days of perfectly flat constant demand = 20.0
+    cleaned_history = [
+        DailyDemandPoint(date=date(2026, 1, i), quantity=20.0) for i in range(1, 29)
+    ]
+
+    # Both models achieve MAE = 0.0 -> exact tie selects SMA
+    best_metrics = select_best_forecast_model(cleaned_history, validation_days=14)
+
+    assert best_metrics.selected_model == "Simple Moving Average"
+    assert best_metrics.mae == 0.0

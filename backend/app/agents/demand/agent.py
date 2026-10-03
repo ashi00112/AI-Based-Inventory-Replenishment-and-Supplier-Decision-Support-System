@@ -5,9 +5,10 @@ from app.schemas.demand import DemandAgentOutput, DemandDataPoint
 from app.services.demand_forecasting import (
     calculate_expected_demand,
     calculate_stockout_risk,
-    evaluate_moving_average_forecast,
     generate_moving_average_forecast,
+    generate_weekday_seasonal_forecast,
     preprocess_demand_data,
+    select_best_forecast_model,
 )
 
 
@@ -17,7 +18,8 @@ class DemandRiskAgent(BaseAgent):
     Conforms to the BaseAgent interface and executes Member 2 deterministic services.
     """
     WINDOW_SIZE: int = 7
-    VALIDATION_DAYS: int = 7
+    VALIDATION_DAYS: int = 14
+    SEASONAL_LOOKBACK_WEEKS: int = 8
 
     def __init__(self):
         super().__init__("DemandRiskAgent")
@@ -107,19 +109,27 @@ class DemandRiskAgent(BaseAgent):
                 f"validation_days ({self.VALIDATION_DAYS}) for model evaluation."
             )
 
-        # 8. Generate multi-day forecasts over full horizon
-        daily_forecasts = generate_moving_average_forecast(
-            cleaned_data,
-            forecast_horizon_days=forecast_horizon_days,
-            window_size=self.WINDOW_SIZE,
-        )
-
-        # 9. Evaluate model accuracy via holdout backtesting
-        evaluation_metrics = evaluate_moving_average_forecast(
+        # 8. Evaluate both SMA and Weekday Seasonal models on holdout and select best model by MAE
+        evaluation_metrics = select_best_forecast_model(
             cleaned_data,
             validation_days=self.VALIDATION_DAYS,
             window_size=self.WINDOW_SIZE,
+            seasonal_lookback_weeks=self.SEASONAL_LOOKBACK_WEEKS,
         )
+
+        # 9. Generate multi-day future forecasts using selected model on FULL cleaned history
+        if evaluation_metrics.selected_model == "Weekday Seasonal Moving Average":
+            daily_forecasts = generate_weekday_seasonal_forecast(
+                cleaned_data,
+                forecast_horizon_days=forecast_horizon_days,
+                seasonal_lookback_weeks=self.SEASONAL_LOOKBACK_WEEKS,
+            )
+        else:
+            daily_forecasts = generate_moving_average_forecast(
+                cleaned_data,
+                forecast_horizon_days=forecast_horizon_days,
+                window_size=self.WINDOW_SIZE,
+            )
 
         # 10. Calculate total forecasted demand across full horizon
         total_forecasted_demand = calculate_expected_demand(daily_forecasts)

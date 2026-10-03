@@ -180,7 +180,7 @@ def calculate_forecast_metrics(
 
 def evaluate_moving_average_forecast(
     cleaned_data: List[DailyDemandPoint],
-    validation_days: int = 7,
+    validation_days: int = 14,
     window_size: int = 7,
 ) -> EvaluationMetrics:
     """
@@ -188,7 +188,7 @@ def evaluate_moving_average_forecast(
 
     Args:
         cleaned_data: Continuous daily demand time series.
-        validation_days: Number of trailing historical days to hold out for validation (must be > 0).
+        validation_days: Number of trailing historical days to hold out for validation (default: 14, must be > 0).
         window_size: Moving average window size in days (must be > 0).
 
     Returns:
@@ -225,6 +225,165 @@ def evaluate_moving_average_forecast(
         predicted_values=predicted_values,
         model_name="Simple Moving Average",
     )
+
+
+def generate_weekday_seasonal_forecast(
+    cleaned_data: List[DailyDemandPoint],
+    forecast_horizon_days: int,
+    seasonal_lookback_weeks: int = 8,
+) -> List[DailyForecastPoint]:
+    """
+    Generates a multi-day demand forecast using Weekday Seasonal Moving Average.
+
+    For each future forecast date:
+    1. Determine its weekday.
+    2. Find historical observations in cleaned_data with the matching weekday.
+    3. Take up to the most recent seasonal_lookback_weeks same-weekday observations.
+    4. Compute the arithmetic mean of those observations.
+    5. Fallback: If fewer than 2 same-weekday observations exist, use moving-average forecast logic
+       for that future point (arithmetic mean of recent 7 days of cleaned_data).
+
+    Args:
+        cleaned_data: Continuous daily demand series from preprocess_demand_data().
+        forecast_horizon_days: Number of future days to forecast (must be > 0).
+        seasonal_lookback_weeks: Max recent same-weekday observations to average (default: 8, must be > 0).
+
+    Returns:
+        List[DailyForecastPoint] starting on the calendar day immediately after cleaned_data[-1].date.
+
+    Raises:
+        ValueError: If cleaned_data is empty, forecast_horizon_days <= 0, or seasonal_lookback_weeks <= 0.
+    """
+    if not cleaned_data:
+        raise ValueError("Cleaned demand series cannot be empty.")
+    if forecast_horizon_days <= 0:
+        raise ValueError("Forecast horizon days must be greater than 0.")
+    if seasonal_lookback_weeks <= 0:
+        raise ValueError("Seasonal lookback weeks must be greater than 0.")
+
+    # Fallback SMA value calculated across up to last 7 historical observations
+    sma_fallback_window = min(7, len(cleaned_data))
+    recent_sma_points = cleaned_data[-sma_fallback_window:]
+    sma_fallback_value = float(np.mean([pt.quantity for pt in recent_sma_points]))
+
+    last_historical_date = cleaned_data[-1].date
+    forecasts: List[DailyForecastPoint] = []
+
+    for day_offset in range(1, forecast_horizon_days + 1):
+        future_date = last_historical_date + timedelta(days=day_offset)
+        target_weekday = future_date.weekday()
+
+        same_weekday_pts = [pt for pt in cleaned_data if pt.date.weekday() == target_weekday]
+
+        if len(same_weekday_pts) >= 2:
+            recent_same_weekday = same_weekday_pts[-seasonal_lookback_weeks:]
+            val = float(np.mean([pt.quantity for pt in recent_same_weekday]))
+        else:
+            val = sma_fallback_value
+
+        forecasted_qty = max(0.0, round(val, 4))
+
+        forecasts.append(
+            DailyForecastPoint(
+                date=future_date,
+                forecasted_quantity=forecasted_qty,
+                confidence_interval_lower=None,
+                confidence_interval_upper=None,
+            )
+        )
+
+    return forecasts
+
+
+def evaluate_weekday_seasonal_forecast(
+    cleaned_data: List[DailyDemandPoint],
+    validation_days: int = 14,
+    seasonal_lookback_weeks: int = 8,
+) -> EvaluationMetrics:
+    """
+    Evaluates Weekday Seasonal forecast accuracy using a deterministic historical holdout split.
+
+    Args:
+        cleaned_data: Continuous daily demand time series.
+        validation_days: Number of trailing historical days to hold out for validation (default: 14, must be > 0).
+        seasonal_lookback_weeks: Lookback weeks for weekday seasonal model (default: 8, must be > 0).
+
+    Returns:
+        EvaluationMetrics schema instance computed against the held-out validation set.
+
+    Raises:
+        ValueError: If cleaned_data is empty, parameters <= 0, or len(cleaned_data) <= validation_days.
+    """
+    if not cleaned_data:
+        raise ValueError("Cleaned demand series cannot be empty.")
+    if validation_days <= 0:
+        raise ValueError("Validation days must be greater than 0.")
+    if seasonal_lookback_weeks <= 0:
+        raise ValueError("Seasonal lookback weeks must be greater than 0.")
+    if len(cleaned_data) <= validation_days:
+        raise ValueError("Historical data length must be greater than validation_days.")
+
+    training_data = cleaned_data[:-validation_days]
+    validation_data = cleaned_data[-validation_days:]
+
+    forecast_points = generate_weekday_seasonal_forecast(
+        training_data,
+        forecast_horizon_days=validation_days,
+        seasonal_lookback_weeks=seasonal_lookback_weeks,
+    )
+
+    actual_values = [float(pt.quantity) for pt in validation_data]
+    predicted_values = [float(pt.forecasted_quantity) for pt in forecast_points]
+
+    return calculate_forecast_metrics(
+        actual_values=actual_values,
+        predicted_values=predicted_values,
+        model_name="Weekday Seasonal Moving Average",
+    )
+
+
+def select_best_forecast_model(
+    cleaned_data: List[DailyDemandPoint],
+    validation_days: int = 14,
+    window_size: int = 7,
+    seasonal_lookback_weeks: int = 8,
+) -> EvaluationMetrics:
+    """
+    Evaluates both Simple Moving Average (SMA) and Weekday Seasonal Moving Average models
+    using identical 14-day holdout validation data, and selects the model with lower MAE.
+
+    Selection policy:
+    - If Weekday Seasonal MAE < SMA MAE: select "Weekday Seasonal Moving Average"
+    - Otherwise (including MAE ties): select "Simple Moving Average"
+
+    Args:
+        cleaned_data: Continuous daily demand time series.
+        validation_days: Holdout validation days (default: 14, must be > 0).
+        window_size: SMA window size (default: 7).
+        seasonal_lookback_weeks: Seasonal lookback weeks (default: 8).
+
+    Returns:
+        EvaluationMetrics instance of the selected model.
+
+    Raises:
+        ValueError: If cleaned_data is empty or len(cleaned_data) <= validation_days.
+    """
+    sma_metrics = evaluate_moving_average_forecast(
+        cleaned_data,
+        validation_days=validation_days,
+        window_size=window_size,
+    )
+    seasonal_metrics = evaluate_weekday_seasonal_forecast(
+        cleaned_data,
+        validation_days=validation_days,
+        seasonal_lookback_weeks=seasonal_lookback_weeks,
+    )
+
+    if seasonal_metrics.mae < sma_metrics.mae:
+        return seasonal_metrics
+    else:
+        return sma_metrics
+
 
 
 def calculate_expected_demand(

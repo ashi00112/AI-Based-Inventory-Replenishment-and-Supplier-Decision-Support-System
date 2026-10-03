@@ -1,11 +1,12 @@
-from datetime import date
+
+from datetime import date, timedelta
 import pytest
 
 from app.agents.demand.agent import DemandRiskAgent
 from app.schemas.demand import DemandDataPoint
 
 
-def get_sample_historical_data(num_days: int = 10) -> list:
+def get_sample_historical_data(num_days: int = 20) -> list:
     """Helper function to generate sample historical demand observations."""
     return [
         {"date": date(2026, 1, i), "quantity": 10.0 if i % 2 == 1 else 20.0}
@@ -18,7 +19,7 @@ def test_full_successful_pipeline():
     agent = DemandRiskAgent()
     context = {
         "product_id": 1,
-        "historical_data": get_sample_historical_data(10),
+        "historical_data": get_sample_historical_data(20),
         "forecast_horizon_days": 10,
         "lead_time_days": 3,
         "current_available_stock": 50,
@@ -39,7 +40,7 @@ def test_product_id_preserved():
     agent = DemandRiskAgent()
     context = {
         "product_id": 42,
-        "historical_data": get_sample_historical_data(10),
+        "historical_data": get_sample_historical_data(20),
         "forecast_horizon_days": 5,
         "lead_time_days": 2,
         "current_available_stock": 100,
@@ -53,7 +54,7 @@ def test_daily_forecasts_count():
     agent = DemandRiskAgent()
     context = {
         "product_id": 1,
-        "historical_data": get_sample_historical_data(10),
+        "historical_data": get_sample_historical_data(20),
         "forecast_horizon_days": 14,
         "lead_time_days": 5,
         "current_available_stock": 100,
@@ -67,7 +68,7 @@ def test_total_forecasted_demand():
     agent = DemandRiskAgent()
     context = {
         "product_id": 1,
-        "historical_data": get_sample_historical_data(10),
+        "historical_data": get_sample_historical_data(20),
         "forecast_horizon_days": 5,
         "lead_time_days": 2,
         "current_available_stock": 100,
@@ -82,7 +83,7 @@ def test_lead_time_demand_in_stockout():
     agent = DemandRiskAgent()
     context = {
         "product_id": 1,
-        "historical_data": get_sample_historical_data(10),
+        "historical_data": get_sample_historical_data(20),
         "forecast_horizon_days": 10,
         "lead_time_days": 4,
         "current_available_stock": 100,
@@ -97,7 +98,7 @@ def test_high_risk_propagation():
     agent = DemandRiskAgent()
     context = {
         "product_id": 1,
-        "historical_data": get_sample_historical_data(10),
+        "historical_data": get_sample_historical_data(20),
         "forecast_horizon_days": 10,
         "lead_time_days": 3,
         "current_available_stock": 10,  # Expected demand is ~45 (3 * 15)
@@ -109,8 +110,8 @@ def test_high_risk_propagation():
 def test_medium_risk_propagation():
     """7. Stock equal to expected demand over lead time yields MEDIUM risk."""
     agent = DemandRiskAgent()
-    # 10 days of constant 10.0 demand -> SMA forecast = 10.0
-    history = [DemandDataPoint(date=date(2026, 1, i), quantity=10.0) for i in range(1, 11)]
+    # 20 days of constant 10.0 demand -> forecast = 10.0
+    history = [DemandDataPoint(date=date(2026, 1, i), quantity=10.0) for i in range(1, 21)]
     context = {
         "product_id": 1,
         "historical_data": history,
@@ -125,7 +126,7 @@ def test_medium_risk_propagation():
 def test_low_risk_propagation():
     """8. Stock exceeding 1.5x expected demand over lead time yields LOW risk."""
     agent = DemandRiskAgent()
-    history = [DemandDataPoint(date=date(2026, 1, i), quantity=10.0) for i in range(1, 11)]
+    history = [DemandDataPoint(date=date(2026, 1, i), quantity=10.0) for i in range(1, 21)]
     context = {
         "product_id": 1,
         "historical_data": history,
@@ -142,7 +143,7 @@ def test_evaluation_metrics_included():
     agent = DemandRiskAgent()
     context = {
         "product_id": 1,
-        "historical_data": get_sample_historical_data(10),
+        "historical_data": get_sample_historical_data(20),
         "forecast_horizon_days": 5,
         "lead_time_days": 2,
         "current_available_stock": 50,
@@ -152,14 +153,17 @@ def test_evaluation_metrics_included():
     assert "mae" in metrics
     assert "rmse" in metrics
     assert "mape" in metrics
-    assert metrics["selected_model"] == "Simple Moving Average"
+    assert metrics["selected_model"] in [
+        "Simple Moving Average",
+        "Weekday Seasonal Moving Average",
+    ]
 
 
 def test_missing_product_id_rejection():
     """10. Missing product_id raises ValueError."""
     agent = DemandRiskAgent()
     context = {
-        "historical_data": get_sample_historical_data(10),
+        "historical_data": get_sample_historical_data(20),
         "forecast_horizon_days": 5,
         "lead_time_days": 2,
         "current_available_stock": 50,
@@ -186,7 +190,7 @@ def test_missing_forecast_horizon_days_rejection():
     agent = DemandRiskAgent()
     context = {
         "product_id": 1,
-        "historical_data": get_sample_historical_data(10),
+        "historical_data": get_sample_historical_data(20),
         "lead_time_days": 2,
         "current_available_stock": 50,
     }
@@ -199,7 +203,7 @@ def test_missing_lead_time_days_rejection():
     agent = DemandRiskAgent()
     context = {
         "product_id": 1,
-        "historical_data": get_sample_historical_data(10),
+        "historical_data": get_sample_historical_data(20),
         "forecast_horizon_days": 5,
         "current_available_stock": 50,
     }
@@ -212,7 +216,7 @@ def test_missing_current_available_stock_rejection():
     agent = DemandRiskAgent()
     context = {
         "product_id": 1,
-        "historical_data": get_sample_historical_data(10),
+        "historical_data": get_sample_historical_data(20),
         "forecast_horizon_days": 5,
         "lead_time_days": 2,
     }
@@ -239,7 +243,7 @@ def test_invalid_product_id_rejection():
     agent = DemandRiskAgent()
     context = {
         "product_id": 0,
-        "historical_data": get_sample_historical_data(10),
+        "historical_data": get_sample_historical_data(20),
         "forecast_horizon_days": 5,
         "lead_time_days": 2,
         "current_available_stock": 50,
@@ -253,7 +257,7 @@ def test_invalid_forecast_horizon_days_rejection():
     agent = DemandRiskAgent()
     context = {
         "product_id": 1,
-        "historical_data": get_sample_historical_data(10),
+        "historical_data": get_sample_historical_data(20),
         "forecast_horizon_days": 0,
         "lead_time_days": 2,
         "current_available_stock": 50,
@@ -267,7 +271,7 @@ def test_invalid_lead_time_days_rejection():
     agent = DemandRiskAgent()
     context = {
         "product_id": 1,
-        "historical_data": get_sample_historical_data(10),
+        "historical_data": get_sample_historical_data(20),
         "forecast_horizon_days": 5,
         "lead_time_days": -1,
         "current_available_stock": 50,
@@ -281,7 +285,7 @@ def test_lead_time_exceeds_horizon_rejection():
     agent = DemandRiskAgent()
     context = {
         "product_id": 1,
-        "historical_data": get_sample_historical_data(10),
+        "historical_data": get_sample_historical_data(20),
         "forecast_horizon_days": 5,
         "lead_time_days": 10,
         "current_available_stock": 50,
@@ -295,7 +299,7 @@ def test_negative_current_available_stock_rejection():
     agent = DemandRiskAgent()
     context = {
         "product_id": 1,
-        "historical_data": get_sample_historical_data(10),
+        "historical_data": get_sample_historical_data(20),
         "forecast_horizon_days": 5,
         "lead_time_days": 2,
         "current_available_stock": -10,
@@ -309,7 +313,7 @@ def test_fractional_current_available_stock_rejection():
     agent = DemandRiskAgent()
     context = {
         "product_id": 1,
-        "historical_data": get_sample_historical_data(10),
+        "historical_data": get_sample_historical_data(20),
         "forecast_horizon_days": 5,
         "lead_time_days": 2,
         "current_available_stock": 30.6,
@@ -319,23 +323,23 @@ def test_fractional_current_available_stock_rejection():
 
 
 def test_insufficient_cleaned_history_for_evaluation():
-    """22. Historical data length <= VALIDATION_DAYS (7) raises ValueError."""
+    """22. Historical data length <= VALIDATION_DAYS (14) raises ValueError."""
     agent = DemandRiskAgent()
     context = {
         "product_id": 1,
-        "historical_data": get_sample_historical_data(5),  # 5 days <= 7
+        "historical_data": get_sample_historical_data(10),  # 10 days <= 14
         "forecast_horizon_days": 5,
         "lead_time_days": 2,
         "current_available_stock": 50,
     }
-    with pytest.raises(ValueError, match="Historical data length \\(5\\) must be greater than validation_days \\(7\\)"):
+    with pytest.raises(ValueError, match="Historical data length \\(10\\) must be greater than validation_days \\(14\\)"):
         agent.run(context)
 
 
 def test_input_historical_data_not_mutated():
     """23. Original input historical_data list and dictionaries are not mutated."""
     agent = DemandRiskAgent()
-    history = get_sample_historical_data(10)
+    history = get_sample_historical_data(20)
     history_copy = [dict(item) for item in history]
 
     context = {
@@ -355,7 +359,7 @@ def test_repeated_execution_determinism():
     agent = DemandRiskAgent()
     context = {
         "product_id": 1,
-        "historical_data": get_sample_historical_data(10),
+        "historical_data": get_sample_historical_data(20),
         "forecast_horizon_days": 5,
         "lead_time_days": 2,
         "current_available_stock": 50,
@@ -364,3 +368,45 @@ def test_repeated_execution_determinism():
     out2 = agent.run(context)
 
     assert out1 == out2
+
+
+def test_agent_selects_weekday_seasonal_model():
+    """25. DemandRiskAgent selects Weekday Seasonal Moving Average when seasonal pattern exists."""
+    agent = DemandRiskAgent()
+    # 28 days with strong Monday pattern (Mon=10, Tue-Sun=50)
+    history = [
+        {"date": date(2026, 1, 5) + timedelta(days=i), "quantity": 10.0 if (date(2026, 1, 5) + timedelta(days=i)).weekday() == 0 else 50.0}
+        for i in range(28)
+    ]
+    context = {
+        "product_id": 1,
+        "historical_data": history,
+        "forecast_horizon_days": 7,
+        "lead_time_days": 3,
+        "current_available_stock": 100,
+    }
+    output = agent.run(context)
+
+    assert output["evaluation_metrics"]["selected_model"] == "Weekday Seasonal Moving Average"
+    assert output["evaluation_metrics"]["mae"] == 0.0
+
+
+def test_agent_selects_sma_model():
+    """26. DemandRiskAgent selects Simple Moving Average when SMA yields lower error."""
+    agent = DemandRiskAgent()
+    # 28 days of flat demand
+    history = [
+        {"date": date(2026, 1, i), "quantity": 25.0}
+        for i in range(1, 29)
+    ]
+    context = {
+        "product_id": 1,
+        "historical_data": history,
+        "forecast_horizon_days": 7,
+        "lead_time_days": 3,
+        "current_available_stock": 100,
+    }
+    output = agent.run(context)
+
+    # Tie selects SMA
+    assert output["evaluation_metrics"]["selected_model"] == "Simple Moving Average"

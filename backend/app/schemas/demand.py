@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date as Date
 from typing import List, Optional
 from pydantic import BaseModel, ConfigDict, Field, StrictInt, model_validator
 
@@ -8,7 +8,7 @@ class DemandDataPoint(BaseModel):
     Standard domain data point representing historical demand for a single date.
     Decoupled from DB persistence models.
     """
-    date: date = Field(..., description="Date of historical demand observation")
+    date: Date = Field(..., description="Date of historical demand observation")
     quantity: float = Field(..., ge=0.0, description="Observed historical demand quantity (>= 0)")
 
     model_config = ConfigDict(
@@ -26,7 +26,7 @@ class DailyDemandPoint(BaseModel):
     """
     Preprocessed continuous daily demand point for a single calendar date.
     """
-    date: date = Field(..., description="Calendar date of daily demand")
+    date: Date = Field(..., description="Calendar date of daily demand")
     quantity: float = Field(..., ge=0.0, description="Aggregated daily demand quantity (>= 0)")
 
     model_config = ConfigDict(
@@ -143,7 +143,7 @@ class DailyForecastPoint(BaseModel):
     """
     Forecasted demand value for a specific future date.
     """
-    date: date = Field(..., description="Future forecast date")
+    date: Date = Field(..., description="Future forecast date")
     forecasted_quantity: float = Field(
         ...,
         ge=0.0,
