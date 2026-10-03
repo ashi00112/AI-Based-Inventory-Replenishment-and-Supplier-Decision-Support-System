@@ -4,7 +4,8 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 from app.core.config import settings
 from app.database.session import get_db
-from app.schemas.health import HealthResponse
+from app.schemas.health import HealthResponse, DocumentIRHealthResponse
+from app.services.chroma_service import check_document_ir_health
 
 router = APIRouter(tags=["Health"])
 
@@ -39,3 +40,16 @@ def get_health(db: Session = Depends(get_db)) -> HealthResponse:
         database_connected=db_connected,
         database_latency_ms=latency_ms,
     )
+
+
+@router.get(
+    "/health/document-ir",
+    response_model=DocumentIRHealthResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Document IR and Vector Store Health Check",
+    description="Operational readiness probe for PostgreSQL document metadata, ChromaDB vector collection, and embedding service.",
+)
+def get_document_ir_health(db: Session = Depends(get_db)) -> DocumentIRHealthResponse:
+    health_data = check_document_ir_health(db=db)
+    return DocumentIRHealthResponse(**health_data)
+

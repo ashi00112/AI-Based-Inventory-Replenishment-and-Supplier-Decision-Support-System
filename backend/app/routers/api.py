@@ -1,12 +1,16 @@
 from fastapi import APIRouter
 from app.routers import (
     auth,
+    documents,
     health,
     inventory,
     inventory_transactions,
     product,
     product_suppliers,
     suppliers,
+    retrieval,
+    supplier_knowledge,
+    supplier_agent,
 )
 
 api_router = APIRouter()
@@ -27,6 +31,16 @@ api_router.include_router(
     prefix="/product-suppliers",
     tags=["Product Supplier Offers"],
 )
+api_router.include_router(retrieval.router, prefix="/documents", tags=["Document Retrieval"])
+api_router.include_router(documents.router, prefix="/documents", tags=["Document Management"])
+api_router.include_router(
+    supplier_knowledge.router,
+    prefix="/supplier-knowledge",
+    tags=["Supplier Knowledge"],
+)
+api_router.include_router(supplier_agent.router, tags=["Supplier Agent"])
+
+
 
 
 
