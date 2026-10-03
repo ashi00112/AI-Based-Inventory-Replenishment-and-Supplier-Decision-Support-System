@@ -7,7 +7,7 @@ from app.main import app
 from app.models.user import User
 
 
-def get_sample_api_historical_data(num_days: int = 10) -> list:
+def get_sample_api_historical_data(num_days: int = 20) -> list:
     """Helper function to construct raw historical data payload for API requests."""
     return [
         {"date": f"2026-09-{i:02d}", "quantity": 10.0 if i % 2 == 1 else 20.0}
@@ -46,7 +46,7 @@ def test_api_analyze_demand_success(auth_client: TestClient):
     """1. Valid authenticated request to POST /api/v1/demand/analyze returns 200 OK."""
     payload = {
         "product_id": 1,
-        "historical_data": get_sample_api_historical_data(10),
+        "historical_data": get_sample_api_historical_data(20),
         "forecast_horizon_days": 10,
         "lead_time_days": 3,
         "current_available_stock": 50,
@@ -65,7 +65,7 @@ def test_api_analyze_demand_unauthenticated(unauth_client: TestClient):
     """2. Unauthenticated request returns 401 Unauthorized."""
     payload = {
         "product_id": 1,
-        "historical_data": get_sample_api_historical_data(10),
+        "historical_data": get_sample_api_historical_data(20),
         "forecast_horizon_days": 5,
         "lead_time_days": 2,
         "current_available_stock": 50,
@@ -78,7 +78,7 @@ def test_api_analyze_demand_product_id_preserved(auth_client: TestClient):
     """3. Response product_id matches request product_id."""
     payload = {
         "product_id": 101,
-        "historical_data": get_sample_api_historical_data(10),
+        "historical_data": get_sample_api_historical_data(20),
         "forecast_horizon_days": 5,
         "lead_time_days": 2,
         "current_available_stock": 20,
@@ -92,7 +92,7 @@ def test_api_analyze_demand_forecast_horizon_days_preserved(auth_client: TestCli
     """4. Response forecast_horizon_days matches request forecast_horizon_days."""
     payload = {
         "product_id": 1,
-        "historical_data": get_sample_api_historical_data(10),
+        "historical_data": get_sample_api_historical_data(20),
         "forecast_horizon_days": 12,
         "lead_time_days": 4,
         "current_available_stock": 20,
@@ -106,7 +106,7 @@ def test_api_analyze_demand_daily_forecasts_count(auth_client: TestClient):
     """5. Output daily_forecasts count equals forecast_horizon_days."""
     payload = {
         "product_id": 1,
-        "historical_data": get_sample_api_historical_data(10),
+        "historical_data": get_sample_api_historical_data(20),
         "forecast_horizon_days": 7,
         "lead_time_days": 3,
         "current_available_stock": 20,
@@ -120,7 +120,7 @@ def test_api_analyze_demand_total_forecasted_demand(auth_client: TestClient):
     """6. Output total_forecasted_demand equals sum of daily forecasts."""
     payload = {
         "product_id": 1,
-        "historical_data": get_sample_api_historical_data(10),
+        "historical_data": get_sample_api_historical_data(20),
         "forecast_horizon_days": 5,
         "lead_time_days": 2,
         "current_available_stock": 20,
@@ -136,7 +136,7 @@ def test_api_analyze_demand_lead_time_demand(auth_client: TestClient):
     """7. Expected demand over lead time equals sum over first lead_time_days forecast points."""
     payload = {
         "product_id": 1,
-        "historical_data": get_sample_api_historical_data(10),
+        "historical_data": get_sample_api_historical_data(20),
         "forecast_horizon_days": 10,
         "lead_time_days": 4,
         "current_available_stock": 20,
@@ -152,7 +152,7 @@ def test_api_analyze_demand_high_risk(auth_client: TestClient):
     """8. Stock less than expected demand over lead time yields HIGH risk."""
     payload = {
         "product_id": 1,
-        "historical_data": get_sample_api_historical_data(10),
+        "historical_data": get_sample_api_historical_data(20),
         "forecast_horizon_days": 10,
         "lead_time_days": 3,
         "current_available_stock": 5,
@@ -165,7 +165,7 @@ def test_api_analyze_demand_high_risk(auth_client: TestClient):
 def test_api_analyze_demand_medium_risk(auth_client: TestClient):
     """9. Stock equal to expected demand over lead time yields MEDIUM risk."""
     constant_history = [
-        {"date": f"2026-09-{i:02d}", "quantity": 10.0} for i in range(1, 11)
+        {"date": f"2026-09-{i:02d}", "quantity": 10.0} for i in range(1, 21)
     ]
     payload = {
         "product_id": 1,
@@ -182,7 +182,7 @@ def test_api_analyze_demand_medium_risk(auth_client: TestClient):
 def test_api_analyze_demand_low_risk(auth_client: TestClient):
     """10. Stock exceeding 1.5x expected demand over lead time yields LOW risk."""
     constant_history = [
-        {"date": f"2026-09-{i:02d}", "quantity": 10.0} for i in range(1, 11)
+        {"date": f"2026-09-{i:02d}", "quantity": 10.0} for i in range(1, 21)
     ]
     payload = {
         "product_id": 1,
@@ -199,7 +199,7 @@ def test_api_analyze_demand_low_risk(auth_client: TestClient):
 def test_api_analyze_demand_missing_required_field(auth_client: TestClient):
     """11. Request missing product_id returns 422 Unprocessable Entity."""
     payload = {
-        "historical_data": get_sample_api_historical_data(10),
+        "historical_data": get_sample_api_historical_data(20),
         "forecast_horizon_days": 5,
         "lead_time_days": 2,
         "current_available_stock": 50,
@@ -212,7 +212,7 @@ def test_api_analyze_demand_fractional_stock_rejection(auth_client: TestClient):
     """12. Fractional current_available_stock (30.6) returns 422 Unprocessable Entity."""
     payload = {
         "product_id": 1,
-        "historical_data": get_sample_api_historical_data(10),
+        "historical_data": get_sample_api_historical_data(20),
         "forecast_horizon_days": 5,
         "lead_time_days": 2,
         "current_available_stock": 30.6,
@@ -225,7 +225,7 @@ def test_api_analyze_demand_negative_stock_rejection(auth_client: TestClient):
     """13. Negative current_available_stock returns 422 Unprocessable Entity."""
     payload = {
         "product_id": 1,
-        "historical_data": get_sample_api_historical_data(10),
+        "historical_data": get_sample_api_historical_data(20),
         "forecast_horizon_days": 5,
         "lead_time_days": 2,
         "current_available_stock": -5,
@@ -238,7 +238,7 @@ def test_api_analyze_demand_invalid_horizon_rejection(auth_client: TestClient):
     """14. forecast_horizon_days = 0 returns 422 Unprocessable Entity."""
     payload = {
         "product_id": 1,
-        "historical_data": get_sample_api_historical_data(10),
+        "historical_data": get_sample_api_historical_data(20),
         "forecast_horizon_days": 0,
         "lead_time_days": 2,
         "current_available_stock": 50,
@@ -251,7 +251,7 @@ def test_api_analyze_demand_invalid_lead_time_rejection(auth_client: TestClient)
     """15. lead_time_days = -1 returns 422 Unprocessable Entity."""
     payload = {
         "product_id": 1,
-        "historical_data": get_sample_api_historical_data(10),
+        "historical_data": get_sample_api_historical_data(20),
         "forecast_horizon_days": 5,
         "lead_time_days": -1,
         "current_available_stock": 50,
@@ -264,7 +264,7 @@ def test_api_analyze_demand_lead_time_exceeds_horizon(auth_client: TestClient):
     """16. lead_time_days > forecast_horizon_days returns 400 Bad Request."""
     payload = {
         "product_id": 1,
-        "historical_data": get_sample_api_historical_data(10),
+        "historical_data": get_sample_api_historical_data(20),
         "forecast_horizon_days": 5,
         "lead_time_days": 10,
         "current_available_stock": 50,
@@ -288,10 +288,10 @@ def test_api_analyze_demand_empty_history_rejection(auth_client: TestClient):
 
 
 def test_api_analyze_demand_insufficient_history(auth_client: TestClient):
-    """18. History length <= 7 returns 400 Bad Request."""
+    """18. History length <= 14 returns 400 Bad Request."""
     payload = {
         "product_id": 1,
-        "historical_data": get_sample_api_historical_data(5),  # 5 days <= 7
+        "historical_data": get_sample_api_historical_data(5),  # 5 days <= 14
         "forecast_horizon_days": 5,
         "lead_time_days": 2,
         "current_available_stock": 50,
@@ -305,7 +305,7 @@ def test_api_analyze_demand_unexpected_extra_field_rejected(auth_client: TestCli
     """19. Extra unexpected field in request returns 422 Unprocessable Entity."""
     payload = {
         "product_id": 1,
-        "historical_data": get_sample_api_historical_data(10),
+        "historical_data": get_sample_api_historical_data(20),
         "forecast_horizon_days": 5,
         "lead_time_days": 2,
         "current_available_stock": 50,
@@ -319,7 +319,7 @@ def test_api_analyze_demand_determinism(auth_client: TestClient):
     """20. Repeated identical API requests return identical responses."""
     payload = {
         "product_id": 1,
-        "historical_data": get_sample_api_historical_data(10),
+        "historical_data": get_sample_api_historical_data(20),
         "forecast_horizon_days": 5,
         "lead_time_days": 2,
         "current_available_stock": 50,
