@@ -31,6 +31,18 @@ from app.schemas.product_supplier import (
     ProductSupplierResponse,
 )
 from app.schemas.document import DocumentResponse, DocumentUpdate
+from app.schemas.decision import (
+    ApprovalStatus,
+    DecisionRiskLevel,
+    DecisionRecommendationRequest,
+    DecisionApprovalRequest,
+    SelectedSupplierInfo,
+    InventorySnapshot,
+    DemandSnapshot,
+    SupplierCandidateOption,
+    DecisionRecommendationResponse,
+    DecisionListResponse,
+)
 
 __all__ = [
     "HealthResponse",
@@ -57,6 +69,16 @@ __all__ = [
     "ProductSupplierResponse",
     "DocumentResponse",
     "DocumentUpdate",
+    "ApprovalStatus",
+    "DecisionRiskLevel",
+    "DecisionRecommendationRequest",
+    "DecisionApprovalRequest",
+    "SelectedSupplierInfo",
+    "InventorySnapshot",
+    "DemandSnapshot",
+    "SupplierCandidateOption",
+    "DecisionRecommendationResponse",
+    "DecisionListResponse",
 ]
 
 
