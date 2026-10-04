@@ -25,25 +25,31 @@ function parseErrorMessage(response, data, fallbackMsg) {
  * Generate a new Replenishment and Supplier Decision recommendation.
  *
  * @param {Object} payload
- * @param {number} [payload.product_id]
+ * @param {number} [payload.productId]
  * @param {string} [payload.sku]
- * @param {number} [payload.forecast_horizon_days=14]
- * @param {string} [payload.urgency='normal']
- * @returns {Promise<{success: boolean, data?: Object, error?: string}>}
+ * @param {number} [payload.forecastHorizonDays=14]
+ * @param {string} [payload.urgency]
+ * @param {string} [payload.urgencyOverride]
+ * @returns {Promise<{success: boolean, data?: import('../types/decision').DecisionRecommendationResponse, error?: string}>}
  */
 export async function getRecommendation({
   productId,
   sku,
   forecastHorizonDays = 14,
-  urgency = 'normal',
+  urgency,
+  urgencyOverride,
 }) {
   try {
     const body = {
       forecast_horizon_days: Number(forecastHorizonDays),
-      urgency,
     };
     if (productId) body.product_id = Number(productId);
     if (sku) body.sku = sku.trim();
+    if (urgencyOverride && urgencyOverride !== 'auto') {
+      body.urgency_override = urgencyOverride;
+    } else if (urgency && urgency !== 'auto') {
+      body.urgency = urgency;
+    }
 
     const response = await fetch(`${API_BASE_URL}/decision/recommend`, {
       method: 'POST',

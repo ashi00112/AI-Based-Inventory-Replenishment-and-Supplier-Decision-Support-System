@@ -342,13 +342,16 @@ def test_7_demo_bootstrap_is_idempotent(test_db: Session):
 
     mock_col = MagicMock()
     mock_col.get.return_value = {"ids": ["v_dummy"]}
-    mock_col.count.return_value = 6
+    mock_col.count.return_value = 8
 
     with patch("scripts.bootstrap_document_ir.generate_procurement_policy"), \
          patch("scripts.bootstrap_document_ir.generate_inventory_replenishment_policy"), \
          patch("scripts.bootstrap_document_ir.generate_techsource_sla"), \
          patch("scripts.bootstrap_document_ir.generate_digital_distribution_sla"), \
          patch("scripts.bootstrap_document_ir.generate_nextgen_sla"), \
+         patch("scripts.bootstrap_document_ir.generate_techsource_performance_review"), \
+         patch("scripts.bootstrap_document_ir.generate_digital_performance_review"), \
+         patch("scripts.bootstrap_document_ir.generate_nextgen_performance_review"), \
          patch("scripts.bootstrap_document_ir.generate_performance_review"), \
          patch("scripts.bootstrap_document_ir.auto_index_document", side_effect=fake_auto_index), \
          patch("app.services.chroma_service.auto_index_document", side_effect=fake_auto_index), \
@@ -357,15 +360,15 @@ def test_7_demo_bootstrap_is_idempotent(test_db: Session):
          patch("os.path.isfile", return_value=True), \
          patch("pathlib.Path.read_bytes", return_value=b"%PDF-1.4 dummy"):
 
-        # First run creates the 6 demo docs
+        # First run creates the 8 demo docs
         res1 = bootstrap_document_ir(db=test_db)
-        assert res1["active_docs"] == 6
-        assert len(res1["actions_performed"]) == 6
+        assert res1["active_docs"] == 8
+        assert len(res1["actions_performed"]) == 8
 
         # Second run should perform 0 actions
         res2 = bootstrap_document_ir(db=test_db)
         assert len(res2["actions_performed"]) == 0
-        assert res2["active_docs"] == 6
+        assert res2["active_docs"] == 8
 
 
 # =============================================================================

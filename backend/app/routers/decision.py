@@ -24,6 +24,7 @@ from app.schemas.decision import (
     DecisionRecommendationRequest,
     DecisionRecommendationResponse,
     DemandSnapshot,
+    DetectedProcurementCondition,
     InventorySnapshot,
     SelectedSupplierInfo,
     SupplierCandidateOption,
@@ -83,10 +84,22 @@ def _map_model_to_response(model: DecisionRecommendation) -> DecisionRecommendat
             except Exception:
                 pass
 
-    if selected_sup and not selected_sup.evidence:
+    if selected_sup:
         matching = next((s for s in sup_options if s.supplier_id == selected_sup.supplier_id), None)
-        if matching and matching.evidence:
-            selected_sup.evidence = matching.evidence
+        if matching:
+            if matching.evidence and not selected_sup.evidence:
+                selected_sup.evidence = matching.evidence
+            if matching.advantages and not selected_sup.advantages:
+                selected_sup.advantages = matching.advantages
+            if matching.risks and not selected_sup.risks:
+                selected_sup.risks = matching.risks
+
+    detected_condition = None
+    if "detected_condition" in payload and payload["detected_condition"]:
+        try:
+            detected_condition = DetectedProcurementCondition(**payload["detected_condition"])
+        except Exception:
+            pass
 
     return DecisionRecommendationResponse(
         id=model.id,
@@ -97,6 +110,12 @@ def _map_model_to_response(model: DecisionRecommendation) -> DecisionRecommendat
         recommended_order_quantity=model.recommended_order_quantity,
         selected_supplier=selected_sup,
         risk_level=model.risk_level,
+        derived_urgency=payload.get("derived_urgency"),
+        effective_urgency=payload.get("effective_urgency"),
+        manual_urgency_override=payload.get("manual_urgency_override"),
+        manual_override_applied=payload.get("manual_override_applied", False),
+        required_delivery_window_days=payload.get("required_delivery_window_days"),
+        detected_condition=detected_condition,
         reasoning=model.reasoning,
         factors=model.factors or [],
         warnings=model.warnings or [],
@@ -159,6 +178,12 @@ def generate_recommendation(
         "inventory_context": response.inventory_context.model_dump(mode="json") if response.inventory_context else None,
         "demand_context": response.demand_context.model_dump(mode="json") if response.demand_context else None,
         "supplier_options": [s.model_dump(mode="json") for s in response.supplier_options],
+        "derived_urgency": response.derived_urgency,
+        "effective_urgency": response.effective_urgency,
+        "manual_urgency_override": response.manual_urgency_override,
+        "manual_override_applied": response.manual_override_applied,
+        "required_delivery_window_days": response.required_delivery_window_days,
+        "detected_condition": response.detected_condition.model_dump(mode="json") if response.detected_condition else None,
     }
 
     inv_available = response.inventory_context.available_stock if response.inventory_context else 0

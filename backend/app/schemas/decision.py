@@ -1,7 +1,7 @@
 """
 Pydantic Schemas for Member 4: Replenishment Decision Agent.
 Defines input requests, output recommendation payloads, human approval schemas,
-and context models adhering strictly to Pydantic v2 conventions.
+situation-aware candidate scoring, grounded SLA policy signals, and context models.
 """
 
 from datetime import date, datetime
@@ -20,10 +20,99 @@ class DecisionRiskLevel(str, Enum):
     CRITICAL = "CRITICAL"
 
 
+class UrgencyLevel(str, Enum):
+    NORMAL = "normal"
+    HIGH = "high"
+    EMERGENCY = "emergency"
+
+
+class ScoreBreakdown(BaseModel):
+    """
+    Transparent numeric score breakdown for a supplier candidate across three core dimensions.
+    """
+    cost_score: float = Field(..., ge=0.0, le=100.0, description="Normalized cost efficiency score (0-100)")
+    delivery_score: float = Field(..., ge=0.0, le=100.0, description="Delivery suitability and safety margin score (0-100)")
+    sla_score: float = Field(..., ge=0.0, le=100.0, description="SLA reliability and contractual suitability score (0-100)")
+    weighted_score: float = Field(..., ge=0.0, le=100.0, description="Composite weighted decision score (0-100)")
+
+    model_config = ConfigDict(extra="forbid")
+
+
+class SupplierPolicySignals(BaseModel):
+    """
+    Structured, grounded decision signals derived from retrieved procurement policy and supplier SLA documents.
+    Every signal must have supporting retrieved document evidence.
+    """
+    compliance_status: str = Field(
+        default="eligible",
+        description="Supplier compliance status: eligible | restricted | suspended | unknown",
+    )
+    expedited_support: str = Field(
+        default="unknown",
+        description="Expedited order support: strong | supported | limited | not_supported | unknown",
+    )
+    reliability_score: Optional[float] = Field(
+        default=None,
+        description="Observed numeric reliability percentage if explicitly grounded in performance reports",
+    )
+    otif_target: Optional[float] = Field(
+        default=None,
+        description="Contractual OTIF target percentage if explicitly present in evidence",
+    )
+    high_risk_suitability: str = Field(
+        default="unknown",
+        description="Suitability for high-risk procurement: preferred | acceptable | limited | unknown",
+    )
+    emergency_suitability: str = Field(
+        default="unknown",
+        description="Suitability for emergency replenishment: preferred | acceptable | limited | not_supported | unknown",
+    )
+    bulk_suitability: str = Field(
+        default="unknown",
+        description="Suitability for standard bulk replenishment: preferred | acceptable | unknown",
+    )
+    delay_risk: str = Field(
+        default="unknown",
+        description="Historical delay variance risk: low | medium | high | unknown",
+    )
+    evidence_refs: List[int] = Field(
+        default_factory=list,
+        description="Document IDs from which signals were grounded",
+    )
+
+    model_config = ConfigDict(extra="forbid")
+
+
+class DetectedProcurementCondition(BaseModel):
+    """
+    Structured summary of the automatically derived procurement condition.
+    """
+    stockout_risk: str = Field(..., description="Stockout risk category: LOW | MEDIUM | HIGH | CRITICAL")
+    procurement_urgency: str = Field(..., description="System-derived procurement urgency: normal | high | emergency")
+    effective_urgency: str = Field(..., description="Effective urgency applied after optional manual override")
+    manual_override_applied: bool = Field(default=False, description="True if manual override was supplied and used")
+    required_delivery_window_days: int = Field(..., description="Maximum acceptable lead time before unsafe stock breach")
+    days_until_buffer_breach: Optional[int] = Field(None, description="Days until projected inventory drops below ROP buffer")
+    days_until_unsafe: Optional[int] = Field(None, description="Alias for days_until_buffer_breach for backward compatibility")
+    days_until_stockout: Optional[int] = Field(None, description="Days until available-to-fulfil inventory reaches zero")
+    reason: str = Field(..., description="Clear explanation grounded in stockout timing and supplier capabilities")
+
+    # UI compatibility aliases
+    risk_level: Optional[str] = None
+    derived_urgency: Optional[str] = None
+    condition_reason: Optional[str] = None
+    weight_cost: Optional[float] = 0.15
+    weight_delivery: Optional[float] = 0.60
+    weight_sla: Optional[float] = 0.25
+    governing_policy_doc: Optional[str] = None
+
+    model_config = ConfigDict(extra="ignore")
+
+
 class DecisionRecommendationRequest(BaseModel):
     """
     Payload for requesting a comprehensive replenishment decision and supplier selection.
-    Accepts product_id or SKU with optional horizon and urgency controls.
+    Accepts product_id or SKU with optional horizon and optional manual urgency override.
     """
     product_id: Optional[int] = Field(None, gt=0, description="Product catalog ID to analyze (must be > 0)")
     sku: Optional[str] = Field(None, description="Optional product SKU code")
@@ -38,9 +127,13 @@ class DecisionRecommendationRequest(BaseModel):
         gt=0,
         description="Optional lead time in days. If omitted, inferred from supplier terms or default.",
     )
-    urgency: str = Field(
-        default="normal",
-        description="Procurement urgency: normal | high | emergency",
+    urgency_override: Optional[str] = Field(
+        default=None,
+        description="Optional manual procurement urgency override: normal | high | emergency. If None, derived automatically.",
+    )
+    urgency: Optional[str] = Field(
+        default=None,
+        description="Backwards-compatible urgency field. Treated as urgency_override if specified and not 'auto'.",
     )
 
     model_config = ConfigDict(
@@ -49,17 +142,21 @@ class DecisionRecommendationRequest(BaseModel):
             "example": {
                 "product_id": 1,
                 "forecast_horizon_days": 14,
-                "urgency": "normal",
             }
         },
     )
 
-    @field_validator("urgency")
+    @field_validator("urgency_override", "urgency")
     @classmethod
-    def validate_urgency(cls, v: str) -> str:
-        valid = {"normal", "high", "emergency"}
-        norm = (v or "").strip().lower()
-        return norm if norm in valid else "normal"
+    def validate_urgency_str(cls, v: Optional[str]) -> Optional[str]:
+        if v is None:
+            return None
+        norm = v.strip().lower()
+        if norm in ("auto", "none", ""):
+            return None
+        if norm in ("normal", "high", "emergency"):
+            return norm
+        return "normal"
 
 
 class DecisionApprovalRequest(BaseModel):
@@ -102,9 +199,37 @@ class SelectedSupplierInfo(BaseModel):
     lead_time_days: int = Field(..., description="Delivery lead time in days")
     estimated_total_cost: float = Field(..., description="unit_cost * recommended_order_quantity")
     selection_reason: str = Field(..., description="Justification for selecting this supplier candidate")
+    advantages: List[str] = Field(
+        default_factory=list,
+        description="Key advantages of selected supplier",
+    )
+    risks: List[str] = Field(
+        default_factory=list,
+        description="Known operational risks of selected supplier",
+    )
     evidence: List[DocumentSearchResult] = Field(
         default_factory=list,
         description="Grounded document evidence chunks supporting this supplier",
+    )
+    delivery_slack_days: Optional[int] = Field(
+        default=None,
+        description="Delivery slack in days (required_delivery_window - supplier.lead_time_days)",
+    )
+    eligibility_status: Optional[str] = Field(
+        default="eligible",
+        description="Supplier eligibility state: eligible | zero_slack | infeasible | policy_restricted",
+    )
+    eligibility_reason: Optional[str] = Field(
+        default=None,
+        description="Explanation for eligibility determination",
+    )
+    score_breakdown: Optional[ScoreBreakdown] = Field(
+        default=None,
+        description="Detailed score breakdown (Cost, Delivery, SLA, Weighted)",
+    )
+    policy_signals: Optional[SupplierPolicySignals] = Field(
+        default=None,
+        description="Structured document-derived SLA and policy signals",
     )
 
     model_config = ConfigDict(
@@ -171,9 +296,38 @@ class SupplierCandidateOption(BaseModel):
         default_factory=list,
         description="Grounded document evidence chunks supporting candidate assessment",
     )
+    delivery_slack_days: Optional[int] = Field(
+        default=None,
+        description="Delivery slack in days (required_delivery_window - supplier.lead_time_days)",
+    )
+    is_feasible: Optional[bool] = Field(
+        default=True,
+        description="True if candidate lead time is within required delivery window and supplier is compliant",
+    )
+    disqualification_reason: Optional[str] = Field(
+        default=None,
+        description="Explanation if candidate is disqualified due to infeasibility or policy restriction",
+    )
+    eligibility_status: Optional[str] = Field(
+        default="eligible",
+        description="Supplier eligibility state: eligible | zero_slack | infeasible | policy_restricted",
+    )
+    eligibility_reason: Optional[str] = Field(
+        default=None,
+        description="Explanation for eligibility determination",
+    )
+    cost_score: Optional[float] = Field(default=None, description="Cost score (0-100)")
+    delivery_score: Optional[float] = Field(default=None, description="Delivery score (0-100)")
+    sla_score: Optional[float] = Field(default=None, description="SLA score (0-100)")
+    weighted_score: Optional[float] = Field(default=None, description="Weighted composite score (0-100)")
+    score_breakdown: Optional[ScoreBreakdown] = Field(default=None, description="Nested score breakdown")
+    policy_signals: Optional[SupplierPolicySignals] = Field(default=None, description="Structured SLA signals")
+    score: Optional[float] = Field(default=None, description="Normalized total score (0-1.0 or 0-100)")
+    signals: Optional[Any] = Field(default=None, description="Compatibility alias for policy_signals")
 
     model_config = ConfigDict(
         from_attributes=True,
+        extra="ignore",
     )
 
 
@@ -200,6 +354,17 @@ class DecisionRecommendationResponse(BaseModel):
         None,
         description="Selected supplier meeting operational criteria and procurement policy",
     )
+
+    # Automatic Urgency & Timing metrics
+    derived_urgency: Optional[str] = Field(None, description="System-derived urgency: normal | high | emergency")
+    effective_urgency: Optional[str] = Field(None, description="Effective urgency applied")
+    manual_urgency_override: Optional[str] = Field(None, description="Manual urgency override if provided")
+    manual_override_applied: bool = Field(default=False, description="Whether manual override was used")
+    required_delivery_window_days: Optional[int] = Field(None, description="Required delivery window in days")
+    days_until_buffer_breach: Optional[int] = Field(None, description="Days until projected inventory breaches ROP buffer")
+    days_until_unsafe: Optional[int] = Field(None, description="Alias for days_until_buffer_breach for backward compatibility")
+    days_until_stockout: Optional[int] = Field(None, description="Days until available-to-fulfil inventory reaches zero")
+    detected_condition: Optional[DetectedProcurementCondition] = Field(None, description="Structured detected procurement condition")
 
     # Synthesis & Explainability
     risk_level: str = Field(..., description="Aggregated risk level: LOW | MEDIUM | HIGH | CRITICAL")
