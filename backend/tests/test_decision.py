@@ -549,10 +549,15 @@ def test_case_11_decision_api_endpoints(client, seed_test_data):
     )
     set_grok_provider(mock_provider)
 
+    from app.core.security import create_access_token
+    admin_token = create_access_token(user_id=1)
+    headers = {"Authorization": f"Bearer {admin_token}"}
+
     # 1. POST /api/v1/decision/recommend
     res_rec = client.post(
         "/api/v1/decision/recommend",
         json={"product_id": 101, "forecast_horizon_days": 14, "urgency": "normal"},
+        headers=headers,
     )
     assert res_rec.status_code == status.HTTP_200_OK
     data = res_rec.json()
@@ -564,14 +569,14 @@ def test_case_11_decision_api_endpoints(client, seed_test_data):
     assert decision_id is not None
 
     # 2. GET /api/v1/decision/history
-    res_hist = client.get("/api/v1/decision/history")
+    res_hist = client.get("/api/v1/decision/history", headers=headers)
     assert res_hist.status_code == status.HTTP_200_OK
     hist_data = res_hist.json()
     assert hist_data["total"] >= 1
     assert any(item["id"] == decision_id for item in hist_data["items"])
 
     # 3. GET /api/v1/decision/{id}
-    res_single = client.get(f"/api/v1/decision/{decision_id}")
+    res_single = client.get(f"/api/v1/decision/{decision_id}", headers=headers)
     assert res_single.status_code == status.HTTP_200_OK
     assert res_single.json()["id"] == decision_id
 
@@ -579,6 +584,7 @@ def test_case_11_decision_api_endpoints(client, seed_test_data):
     res_app = client.post(
         f"/api/v1/decision/{decision_id}/approve",
         json={"status": "APPROVED", "reviewer_notes": "Manager confirmed."},
+        headers=headers,
     )
     assert res_app.status_code == status.HTTP_200_OK
     assert res_app.json()["approval_status"] == "APPROVED"

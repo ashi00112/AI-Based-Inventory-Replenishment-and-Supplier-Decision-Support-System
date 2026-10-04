@@ -61,6 +61,13 @@ def auth_client(test_db_session):
     app.dependency_overrides.clear()
 
 
+@pytest.fixture(autouse=True)
+def enable_registration_for_tests(monkeypatch):
+    """Enables registration endpoint during isolated unit testing of the registration flow."""
+    from app.core.config import settings
+    monkeypatch.setattr(settings, "ALLOW_PUBLIC_REGISTRATION", True)
+
+
 def test_valid_registration_flow(auth_client: TestClient, test_db_session):
     """
     1. Valid registration returns 201 Created.

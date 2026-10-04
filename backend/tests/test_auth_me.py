@@ -275,4 +275,4 @@ class TestAuthMeEndpoint:
         db, _ = test_db_session
         dialect_name = db.bind.dialect.name
         assert dialect_name == "sqlite"
-        assert str(db.bind.url) == "sqlite:///:memory:"
+        assert str(db.bind.url) in ("sqlite:///:memory:", "sqlite:///%3Amemory%3A")
