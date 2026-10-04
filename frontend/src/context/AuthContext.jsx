@@ -94,8 +94,15 @@ export function AuthProvider({ children }) {
     };
   }, []);
 
+  const role = (user?.role || '').toLowerCase();
+  const isAdmin = role === 'admin';
+  const isStaff = role === 'staff' || role === 'user';
+
   const value = {
     user,
+    role,
+    isAdmin,
+    isStaff,
     isAuthenticated: !!user,
     isLoading,
     refreshCurrentUser,

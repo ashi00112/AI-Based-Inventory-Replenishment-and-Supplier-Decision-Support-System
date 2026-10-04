@@ -1026,6 +1026,9 @@ def run_seed(
             db.rollback()
             logger.info("[DRY RUN COMPLETE] Validations passed. All database modifications were rolled back.")
         else:
+            from app.services.user_service import ensure_initial_admin
+            admin_user = ensure_initial_admin(db)
+            logger.info("Initial administrator account ensured for %s", admin_user.email)
             db.commit()
             logger.info("[SUCCESS] Unified demo data committed to database successfully.")
 

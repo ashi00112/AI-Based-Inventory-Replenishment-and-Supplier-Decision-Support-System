@@ -42,6 +42,12 @@ class Settings(BaseSettings):
     JWT_ALGORITHM: str = "HS256"
     JWT_ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
 
+    # User Registration & Initial Admin Settings
+    ALLOW_PUBLIC_REGISTRATION: bool = False
+    INITIAL_ADMIN_EMAIL: str = "admin@smartsupply.ai"
+    INITIAL_ADMIN_PASSWORD: str = "Admin1234!"
+    INITIAL_ADMIN_NAME: str = "System Administrator"
+
     # Document Storage & Upload Limits
     DOCUMENT_STORAGE_DIR: str = os.path.join(
         os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "storage", "documents"

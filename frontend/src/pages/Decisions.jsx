@@ -31,7 +31,7 @@ import {
 } from '../services/decisionApi';
 
 export default function Decisions() {
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
 
   // Products catalog state
   const [products, setProducts] = useState([]);
@@ -349,29 +349,36 @@ export default function Decisions() {
                 </h3>
               </div>
 
-              {/* Action Buttons for Human Approval */}
+              {/* Action Buttons for Human Approval (Admin Only) */}
               {currentDecision.approval_status === 'PENDING' && (
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => {
-                      setActionNotes('');
-                      setRejectionModalOpen(true);
-                    }}
-                    className="px-3.5 py-1.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 text-rose-300 text-xs font-medium transition"
-                  >
-                    Reject Recommendation
-                  </button>
-                  <button
-                    onClick={() => {
-                      setActionNotes('');
-                      setApprovalModalOpen(true);
-                    }}
-                    className="px-4 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold shadow-lg shadow-emerald-600/20 transition flex items-center gap-1.5"
-                  >
-                    <CheckCircle2 className="w-3.5 h-3.5" />
-                    <span>Approve Requisition</span>
-                  </button>
-                </div>
+                isAdmin ? (
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => {
+                        setActionNotes('');
+                        setRejectionModalOpen(true);
+                      }}
+                      className="px-3.5 py-1.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 text-rose-300 text-xs font-medium transition"
+                    >
+                      Reject Recommendation
+                    </button>
+                    <button
+                      onClick={() => {
+                        setActionNotes('');
+                        setApprovalModalOpen(true);
+                      }}
+                      className="px-4 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold shadow-lg shadow-emerald-600/20 transition flex items-center gap-1.5"
+                    >
+                      <CheckCircle2 className="w-3.5 h-3.5" />
+                      <span>Approve Requisition</span>
+                    </button>
+                  </div>
+                ) : (
+                  <div className="text-xs text-neutral-400 italic flex items-center gap-1.5 bg-white/[0.03] px-3.5 py-1.5 rounded-xl border border-white/[0.06]">
+                    <Clock className="w-3.5 h-3.5 text-amber-400" />
+                    <span>Pending Administrator Review & Decision</span>
+                  </div>
+                )
               )}
             </div>
 

@@ -43,6 +43,11 @@ from app.schemas.decision import (
     DecisionRecommendationResponse,
     DecisionListResponse,
 )
+from app.schemas.user import (
+    AdminUserCreate,
+    AdminUserUpdate,
+    UserListResponse,
+)
 
 __all__ = [
     "HealthResponse",
@@ -79,6 +84,9 @@ __all__ = [
     "SupplierCandidateOption",
     "DecisionRecommendationResponse",
     "DecisionListResponse",
+    "AdminUserCreate",
+    "AdminUserUpdate",
+    "UserListResponse",
 ]
 
 

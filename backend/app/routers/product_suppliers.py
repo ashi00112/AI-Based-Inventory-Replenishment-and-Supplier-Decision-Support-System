@@ -20,9 +20,10 @@ from app.services.product_supplier_service import (
     list_product_suppliers,
     update_product_supplier,
 )
+from app.dependencies.auth import require_catalog_access
 from app.services.supplier_service import SupplierNotFoundError
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(require_catalog_access)])
 
 
 @router.post(

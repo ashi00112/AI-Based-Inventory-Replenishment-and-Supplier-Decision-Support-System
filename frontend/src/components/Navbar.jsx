@@ -8,13 +8,14 @@ import {
   Truck,
   FileText,
   Sparkles,
+  Users,
   LogOut,
   Menu,
   X,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
-const navLinks = [
+const baseNavLinks = [
   { to: '/', label: 'Dashboard', icon: LayoutDashboard },
   { to: '/products', label: 'Products', icon: Package },
   { to: '/inventory', label: 'Inventory', icon: Boxes },
@@ -26,10 +27,15 @@ const navLinks = [
 
 
 export default function Navbar() {
-  const { user, logout } = useAuth();
+  const { user, isAdmin, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  const navLinks = [
+    ...baseNavLinks,
+    ...(isAdmin ? [{ to: '/users', label: 'Users', icon: Users }] : []),
+  ];
 
   const handleLogout = () => {
     logout();

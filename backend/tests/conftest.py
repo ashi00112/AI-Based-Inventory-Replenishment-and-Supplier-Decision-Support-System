@@ -17,3 +17,35 @@ def client() -> TestClient:
     """
     with TestClient(app) as test_client:
         yield test_client
+
+
+# Legacy catalog CRUD test modules written before RBAC was introduced.
+# They test business logic, not auth, so catalog auth is bypassed for them only.
+# Real authentication/authorization enforcement is covered by test_rbac.py.
+_LEGACY_CATALOG_TEST_MODULES = {
+    "test_products",
+    "test_suppliers",
+    "test_product_suppliers",
+    "test_inventory_transactions",
+    "test_inventory",
+    "test_inventory_monitoring_agent",
+}
+
+
+@pytest.fixture(autouse=True)
+def _bypass_catalog_auth_for_legacy_tests(request):
+    module_name = request.module.__name__.rsplit(".", 1)[-1]
+    if module_name not in _LEGACY_CATALOG_TEST_MODULES:
+        yield
+        return
+
+    from app.dependencies.auth import require_catalog_access
+    from app.models.user import User, UserRole
+
+    def _staff_user() -> User:
+        return User(id=0, name="Test Staff", email="staff@example.com",
+                    password_hash="x", role=UserRole.STAFF.value, is_active=True)
+
+    app.dependency_overrides[require_catalog_access] = _staff_user
+    yield
+    app.dependency_overrides.pop(require_catalog_access, None)

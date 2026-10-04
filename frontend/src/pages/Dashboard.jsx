@@ -16,6 +16,7 @@ import {
   Sparkles,
   Sliders,
   RotateCcw,
+  Users,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { getProducts } from '../services/productApi';
@@ -24,7 +25,7 @@ import { getInventoryTransactions } from '../services/inventoryTransactionApi';
 import Navbar from '../components/Navbar';
 
 export default function Dashboard() {
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
 
   // State
   const [products, setProducts] = useState([]);
@@ -483,6 +484,25 @@ export default function Dashboard() {
                 Execute verified and immutable Sales, Restocks, Returns, and Adjustments with full audit trails.
               </p>
             </Link>
+
+            {/* Admin User Management Card */}
+            {isAdmin && (
+              <Link
+                to="/users"
+                className="p-5 rounded-2xl bg-neutral-900/30 hover:bg-neutral-900/50 border border-violet-500/20 hover:border-violet-500/40 transition group space-y-2 block"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="p-2.5 bg-violet-500/10 rounded-xl text-violet-400 group-hover:scale-105 transition">
+                    <Users className="w-4 h-4" />
+                  </div>
+                  <ArrowUpRight className="w-4 h-4 text-neutral-600 group-hover:text-violet-400 transition" />
+                </div>
+                <h4 className="font-semibold text-white text-sm">User Management</h4>
+                <p className="text-neutral-500 text-xs leading-relaxed">
+                  Provision and manage internal Staff and Administrator accounts with RBAC controls.
+                </p>
+              </Link>
+            )}
           </div>
         </section>
       </main>
