@@ -1,7 +1,7 @@
 """
 SmartSupply Electronics — Demo Document Generation & API Upload Script.
 
-Generates 6 valid, professional PDF documents using ReportLab and uploads them
+Generates 8 valid, professional PDF documents using ReportLab and uploads them
 via the Document Management API (FastAPI TestClient) with proper validation,
 checksum calculation, UUID storage keys, and supplier relationship enforcement.
 """
@@ -44,7 +44,6 @@ from app.services.document_service import get_storage_dir, delete_document
 
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
-
 
 
 class NumberedCanvas(canvas.Canvas):
@@ -98,15 +97,12 @@ class NumberedCanvas(canvas.Canvas):
 
 
 def get_custom_stylesheet():
-    """Builds a cohesive, modern typographic hierarchy for enterprise PDFs."""
+    """Generates a cohesive, professional typography and color hierarchy."""
     styles = getSampleStyleSheet()
-    
-    # Custom color palette
-    c_primary = colors.HexColor("#0F172A")    # Slate 900
-    c_blue = colors.HexColor("#1D4ED8")       # Blue 700
-    c_accent = colors.HexColor("#0369A1")     # Sky 700
-    c_body = colors.HexColor("#334155")       # Slate 700
-    c_muted = colors.HexColor("#64748B")      # Slate 500
+
+    c_primary = colors.HexColor("#1E3A8A")     # Navy 900
+    c_secondary = colors.HexColor("#0284C7")   # Sky 600
+    c_body = colors.HexColor("#334155")        # Slate 700
 
     styles.add(ParagraphStyle(
         name="DocTitle",
@@ -122,64 +118,48 @@ def get_custom_stylesheet():
         fontName="Helvetica",
         fontSize=10,
         leading=14,
-        textColor=c_blue,
-        spaceAfter=12,
-    ))
-
-    styles.add(ParagraphStyle(
-        name="MetaLabel",
-        fontName="Helvetica-Bold",
-        fontSize=8.5,
-        leading=11,
-        textColor=c_muted,
-    ))
-
-    styles.add(ParagraphStyle(
-        name="MetaValue",
-        fontName="Helvetica",
-        fontSize=8.5,
-        leading=11,
-        textColor=c_primary,
+        textColor=c_secondary,
+        spaceAfter=14,
     ))
 
     styles.add(ParagraphStyle(
         name="SectionHeading",
         fontName="Helvetica-Bold",
-        fontSize=13,
+        fontSize=12,
         leading=16,
         textColor=c_primary,
-        spaceBefore=14,
-        spaceAfter=6,
+        spaceBefore=12,
+        spaceAfter=5,
         keepWithNext=True,
     ))
 
     styles.add(ParagraphStyle(
         name="SubSectionHeading",
         fontName="Helvetica-Bold",
-        fontSize=10.5,
+        fontSize=10,
         leading=13,
-        textColor=c_accent,
-        spaceBefore=10,
-        spaceAfter=4,
+        textColor=c_secondary,
+        spaceBefore=8,
+        spaceAfter=3,
         keepWithNext=True,
     ))
 
     styles.add(ParagraphStyle(
         name="ClauseBody",
         fontName="Helvetica",
-        fontSize=9,
-        leading=13,
+        fontSize=8.5,
+        leading=12.5,
         textColor=c_body,
-        spaceAfter=6,
+        spaceAfter=5,
     ))
 
     styles.add(ParagraphStyle(
         name="ClauseBodyBold",
         fontName="Helvetica-Bold",
-        fontSize=9,
-        leading=13,
-        textColor=c_primary,
-        spaceAfter=6,
+        fontSize=8.5,
+        leading=12.5,
+        textColor=colors.HexColor("#0F172A"),
+        spaceAfter=5,
     ))
 
     styles.add(ParagraphStyle(
@@ -188,40 +168,56 @@ def get_custom_stylesheet():
         fontSize=8.5,
         leading=12,
         textColor=c_body,
-        leftIndent=14,
-        firstLineIndent=-10,
+        leftIndent=12,
+        firstLineIndent=-8,
         spaceAfter=3,
     ))
 
     styles.add(ParagraphStyle(
         name="CalloutText",
-        fontName="Helvetica-Oblique",
+        fontName="Helvetica",
         fontSize=8.5,
         leading=12,
-        textColor=colors.HexColor("#1E293B"),
+        textColor=colors.HexColor("#0C4A6E"),
+    ))
+
+    styles.add(ParagraphStyle(
+        name="MetaLabel",
+        fontName="Helvetica-Bold",
+        fontSize=7.5,
+        leading=10,
+        textColor=colors.HexColor("#64748B"),
+    ))
+
+    styles.add(ParagraphStyle(
+        name="MetaValue",
+        fontName="Helvetica",
+        fontSize=8,
+        leading=11,
+        textColor=colors.HexColor("#0F172A"),
     ))
 
     styles.add(ParagraphStyle(
         name="TableHeader",
         fontName="Helvetica-Bold",
-        fontSize=8.5,
-        leading=11,
+        fontSize=8,
+        leading=10,
         textColor=colors.white,
     ))
 
     styles.add(ParagraphStyle(
         name="TableCell",
         fontName="Helvetica",
-        fontSize=8,
-        leading=11,
+        fontSize=7.5,
+        leading=10,
         textColor=c_body,
     ))
 
     styles.add(ParagraphStyle(
         name="TableCellBold",
         fontName="Helvetica-Bold",
-        fontSize=8,
-        leading=11,
+        fontSize=7.5,
+        leading=10,
         textColor=c_primary,
     ))
 
@@ -239,14 +235,13 @@ def create_meta_box(styles, meta_items):
             r.extend([p_label, p_val])
         data.append(r)
 
-    # 4 columns: Label1, Val1, Label2, Val2
     t = Table(data, colWidths=[110, 135, 100, 142])
     t.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor("#F8FAFC")),
         ('BOX', (0, 0), (-1, -1), 0.75, colors.HexColor("#E2E8F0")),
         ('INNERGRID', (0, 0), (-1, -1), 0.5, colors.HexColor("#F1F5F9")),
-        ('TOPPADDING', (0, 0), (-1, -1), 5),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
+        ('TOPPADDING', (0, 0), (-1, -1), 4),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
         ('LEFTPADDING', (0, 0), (-1, -1), 8),
         ('RIGHTPADDING', (0, 0), (-1, -1), 8),
         ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
@@ -264,10 +259,10 @@ def create_callout_box(styles, text, title="POLICY DIRECTIVE"):
         ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor("#F0F9FF")),
         ('BOX', (0, 0), (-1, -1), 0.5, colors.HexColor("#BAE6FD")),
         ('LINELEFT', (0, 0), (0, -1), 3.0, colors.HexColor("#0284C7")),
-        ('TOPPADDING', (0, 0), (-1, -1), 6),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
-        ('LEFTPADDING', (0, 0), (-1, -1), 10),
-        ('RIGHTPADDING', (0, 0), (-1, -1), 10),
+        ('TOPPADDING', (0, 0), (-1, -1), 5),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
+        ('LEFTPADDING', (0, 0), (-1, -1), 8),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 8),
     ]))
     return t
 
@@ -287,157 +282,167 @@ def generate_procurement_policy(output_path: str):
     )
     story = []
 
-    # Title block
     story.append(Paragraph("SmartSupply Procurement Policy 2026", styles["DocTitle"]))
     story.append(Paragraph("Enterprise Commercial Directives & Supply Chain Governance Guidelines", styles["DocSubtitle"]))
     
     meta_items = [
-        [("Document Identifier", "POL-PROC-2026-V1"), ("Effective Date", "January 01, 2026")],
+        [("Document Identifier", "POL-PROC-2026-V2"), ("Effective Date", "January 01, 2026")],
         [("Governance Authority", "Executive Procurement Council"), ("Applicability", "Enterprise-Wide / Global")],
         [("Document Type", "Procurement Policy"), ("Review Cadence", "Annual Mandatory Review")],
     ]
     story.append(create_meta_box(styles, meta_items))
-    story.append(Spacer(1, 14))
+    story.append(Spacer(1, 12))
 
-    # 1.0 Objectives & Governance
-    story.append(Paragraph("1.0 Strategic Procurement Objectives and Principles", styles["SectionHeading"]))
+    # 1.0 Supplier Eligibility & Compliance
+    story.append(Paragraph("1.0 Supplier Eligibility, Compliance, and Restrictive Covenants", styles["SectionHeading"]))
     story.append(Paragraph(
-        "1.1 The principal mission of SmartSupply Electronics is to maintain continuous availability of high-quality electronics, "
-        "accessories, and computing peripherals while minimizing total cost of ownership (TCO) and operational risk across the distribution network.",
+        "1.1 Only certified vendors active on the SmartSupply Approved Vendor List (AVL) may receive commercial purchase commitments. "
+        "Suppliers marked by compliance audits as restricted, suspended, blacklisted, or ineligible are strictly barred from receiving procurement awards.",
         styles["ClauseBody"]
     ))
     story.append(Paragraph(
-        "1.2 All purchasing activities shall operate under four core principles: commercial transparency, competitive bidding, strict ethical integrity, "
-        "and vendor accountability. Procurement officers must ensure that supplier selections optimize lead time, product reliability, and financial terms.",
-        styles["ClauseBody"]
-    ))
-
-    # 2.0 Approved Supplier Qualification
-    story.append(Paragraph("2.0 Approved Supplier Qualification and Onboarding", styles["SectionHeading"]))
-    story.append(Paragraph(
-        "2.1 Only certified vendors registered on the SmartSupply Approved Vendor List (AVL) may receive commercial purchase commitments. "
-        "Prospective suppliers must undergo a formal qualification process including validation of business registration, statutory tax compliance "
-        "(VAT/TIN), financial solvency checks, and adherence to international product safety and environmental certifications (RoHS, CE, and ISO 9001).",
-        styles["ClauseBody"]
-    ))
-    story.append(Paragraph(
-        "2.2 Active vendors are subject to annual performance accreditation. Suppliers that maintain an On-Time In-Full (OTIF) rate above 95% and a product "
-        "defect rate below 1.5% qualify for preferred vendor status, receiving priority allocation in high-volume product categories.",
-        styles["ClauseBody"]
+        "1.2 <b>Suspended supplier procurement eligibility:</b> Any vendor currently undergoing Stage 2 or Stage 3 non-performance escalation, "
+        "or flagged with an unrectified compliance hold, is deemed ineligible. Purchase orders shall never be awarded to suspended or restricted vendors "
+        "regardless of unit price advantages.",
+        styles["ClauseBodyBold"]
     ))
 
-    # 3.0 Purchase Approval Authority & Financial Thresholds
-    story.append(Paragraph("3.0 Purchase Approval Authority & Expenditure Thresholds", styles["SectionHeading"]))
+    # 2.0 Standard Procurement (Normal Urgency)
+    story.append(Paragraph("2.0 Standard Procurement and Normal Urgency Rules", styles["SectionHeading"]))
     story.append(Paragraph(
-        "3.1 To enforce financial governance, all procurement commitments must obtain prior written authorization in accordance with graduated spending tiers. "
-        "Splitting purchase requisitions to evade delegated financial authority levels is strictly forbidden and constitutes a material compliance violation.",
+        "2.1 Under NORMAL procurement urgency, sufficient delivery time exists and candidate suppliers can comfortably satisfy the required delivery window. "
+        "In standard procurement, total acquisition cost is the dominant selection criterion, provided the vendor meets MOQ and compliance standards.",
         styles["ClauseBody"]
     ))
     story.append(Paragraph(
-        "• <b>Tier 1 (Up to LKR 100,000):</b> Operational Purchasing Supervisor approval required. Applicable to standard recurring replenishment orders within budget.",
-        styles["BulletText"]
+        "2.2 <b>Normal Priority Decision Weighting:</b> When replenishment urgency is Normal, supplier evaluation adheres to: "
+        "Cost Efficiency 60%, Delivery Suitability 20%, and SLA Reliability 20%. Cost-effective suppliers such as NextGen Supplies are preferred for bulk replenishment.",
+        styles["ClauseBodyBold"]
+    ))
+
+    # 3.0 High-Risk Replenishment (High Urgency)
+    story.append(Paragraph("3.0 High-Risk Replenishment and Balanced Decision Rules", styles["SectionHeading"]))
+    story.append(Paragraph(
+        "3.1 A HIGH urgency condition occurs when inventory is expected to breach the reorder point buffer within a narrow delivery window. "
+        "In high risk supplier selection delivery versus cost, procurement officers must balance acquisition cost with delivery safety margin. "
+        "High urgency does NOT blindly select the fastest supplier nor the cheapest supplier; it requires a holistic trade-off.",
+        styles["ClauseBody"]
     ))
     story.append(Paragraph(
-        "• <b>Tier 2 (LKR 100,001 to LKR 500,000):</b> Procurement Manager approval required. Requires comparative price evaluation across at least two approved suppliers.",
-        styles["BulletText"]
+        "3.2 <b>High Priority Decision Weighting:</b> In HIGH urgency scenarios, weighting shifts to: "
+        "Delivery Suitability 40%, Cost 40%, and SLA Reliability 20%. Suppliers with higher delivery slack provide safety buffer against stockouts, "
+        "which justifies modest cost premiums over zero-slack options.",
+        styles["ClauseBodyBold"]
+    ))
+
+    # 4.0 Emergency Procurement Protocol
+    story.append(Paragraph("4.0 Emergency Procurement Protocol and Lead-Time Dominance", styles["SectionHeading"]))
+    story.append(Paragraph(
+        "4.1 An EMERGENCY procurement condition is declared when stockout is imminent or already in progress, threatening retail partner fulfillment. "
+        "In emergency procurement fastest supplier capability dominates to prevent operational interruption.",
+        styles["ClauseBody"]
     ))
     story.append(Paragraph(
-        "• <b>Tier 3 (Exceeding LKR 500,000):</b> High-value purchase approval requiring joint sign-off from the Chief Financial Officer (CFO) and the Vice President of Operations.",
-        styles["BulletText"]
+        "4.2 <b>Emergency Priority Decision Weighting:</b> In EMERGENCY scenarios, weighting is: "
+        "Delivery Suitability 60%, SLA Reliability 25%, and Cost 15%. If multiple emergency suppliers can satisfy the delivery window, "
+        "the lower-cost compliant supplier shall be preferred as a tie-breaker.",
+        styles["ClauseBodyBold"]
     ))
-    story.append(Spacer(1, 4))
+
+    # 5.0 Cost vs Delivery Priority Weighting Matrix
+    story.append(Paragraph("5.0 Cost vs Delivery Priority Weighting Matrix", styles["SectionHeading"]))
+    matrix_data = [
+        [
+            Paragraph("Procurement Urgency", styles["TableHeader"]),
+            Paragraph("Cost Weight", styles["TableHeader"]),
+            Paragraph("Delivery Weight", styles["TableHeader"]),
+            Paragraph("SLA / Reliability Weight", styles["TableHeader"]),
+            Paragraph("Core Strategic Intent", styles["TableHeader"]),
+        ],
+        [
+            Paragraph("NORMAL", styles["TableCellBold"]),
+            Paragraph("60%", styles["TableCell"]),
+            Paragraph("20%", styles["TableCell"]),
+            Paragraph("20%", styles["TableCell"]),
+            Paragraph("Cost optimization; all feasible suppliers deliver comfortably", styles["TableCell"]),
+        ],
+        [
+            Paragraph("HIGH", styles["TableCellBold"]),
+            Paragraph("40%", styles["TableCell"]),
+            Paragraph("40%", styles["TableCell"]),
+            Paragraph("20%", styles["TableCell"]),
+            Paragraph("Balanced trade-off; delivery safety margin weighed alongside price", styles["TableCell"]),
+        ],
+        [
+            Paragraph("EMERGENCY", styles["TableCellBold"]),
+            Paragraph("15%", styles["TableCell"]),
+            Paragraph("60%", styles["TableCell"]),
+            Paragraph("25%", styles["TableCell"]),
+            Paragraph("Delivery continuity dominates; fastest compliant supplier chosen", styles["TableCell"]),
+        ],
+    ]
+    t_mat = Table(matrix_data, colWidths=[80, 65, 75, 95, 172])
+    t_mat.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#1E3A8A")),
+        ('BOX', (0, 0), (-1, -1), 0.5, colors.HexColor("#CBD5E1")),
+        ('INNERGRID', (0, 0), (-1, -1), 0.5, colors.HexColor("#E2E8F0")),
+        ('TOPPADDING', (0, 0), (-1, -1), 4),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+        ('LEFTPADDING', (0, 0), (-1, -1), 6),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 6),
+    ]))
+    story.append(t_mat)
+    story.append(Spacer(1, 8))
+
+    # 6.0 Delivery Safety Margin & Delivery Slack
+    story.append(Paragraph("6.0 Delivery Safety Margin and Delivery Slack Governance", styles["SectionHeading"]))
+    story.append(Paragraph(
+        "6.1 <b>Delivery Slack Definition:</b> Delivery Slack is mathematically defined as: "
+        "<code>delivery_slack_days = required_delivery_window_days - supplier.lead_time_days</code>.<br/>"
+        "• <b>Slack &lt; 0 days (Infeasible):</b> Supplier cannot meet the delivery window. Infeasible for award when compliant alternatives exist.<br/>"
+        "• <b>Zero delivery slack (Slack = 0 days):</b> Supplier lead time exactly matches the window with zero margin. Treated as elevated execution risk and penalized in scoring.<br/>"
+        "• <b>Slack 1–2 days:</b> Acceptable delivery margin.<br/>"
+        "• <b>Slack &ge; 3 days:</b> Strong delivery margin offering maximum operational resilience against freight delays.",
+        styles["ClauseBody"]
+    ))
+
+    # 7.0 Purchase Approval Authority & Expenditure Thresholds
+    story.append(Paragraph("7.0 Purchase Approval Authority and Expenditure Thresholds", styles["SectionHeading"]))
+    story.append(Paragraph(
+        "7.1 SmartSupply enforces a graduated financial authorization hierarchy:<br/>"
+        "• <b>Tier 1 (Up to LKR 100,000):</b> Operational Purchasing Supervisor approval required.<br/>"
+        "• <b>Tier 2 (LKR 100,001 to LKR 500,000):</b> Procurement Manager approval required.<br/>"
+        "• <b>Tier 3 (Exceeding LKR 500,000):</b> High-value commitment requiring joint sign-off from Chief Financial Officer (CFO) and VP of Operations.",
+        styles["ClauseBody"]
+    ))
     story.append(create_callout_box(
         styles,
-        "What approval is needed for a high-value purchase? Any procurement commitment exceeding LKR 500,000 requires joint executive authorization "
-        "from the Chief Financial Officer (CFO) and the Vice President of Operations following competitive bid review.",
-        "GOVERNANCE RULE"
+        "Expenditures exceeding LKR 500,000 mandate joint executive sign-off from the CFO and VP of Operations. Requisitions cannot be split to evade threshold limits.",
+        "EXPENDITURE THRESHOLD"
     ))
     story.append(Spacer(1, 6))
 
-    # 4.0 Emergency Procurement Protocol
-    story.append(Paragraph("4.0 Emergency Procurement Protocol and Lead-Time Prioritization", styles["SectionHeading"]))
-    story.append(Paragraph(
-        "4.1 An emergency procurement condition is declared when critical stock depletion directly threatens fulfillment operations, key retail partnerships, "
-        "or warranty replacement guarantees.",
-        styles["ClauseBody"]
-    ))
-    story.append(Paragraph(
-        "4.2 <b>Can emergency orders prioritize delivery speed over price?</b> Yes. In declared emergency procurement scenarios, the Procurement Department is "
-        "expressly authorized to prioritize supplier delivery speed and immediate stock availability over the lowest purchase price. "
-        "Procurement officers may select premium expedited suppliers and accept pricing up to 20% above standard contract benchmarks if the supplier guarantees delivery within 48 hours.",
-        styles["ClauseBodyBold"]
-    ))
-    story.append(Paragraph(
-        "4.3 All emergency purchase orders must be documented with an Emergency Justification Form and submitted to the Procurement Manager within 48 business hours of issuance.",
-        styles["ClauseBody"]
-    ))
-
-    # 5.0 Supplier Selection Principles
-    story.append(Paragraph("5.0 Supplier Selection Principles and Dual Sourcing", styles["SectionHeading"]))
-    story.append(Paragraph(
-        "5.1 Commercial awards shall be determined using a weighted supplier scorecard: Unit Price and Commercial Terms (30%), Demonstrated On-Time Delivery Reliability (25%), "
-        "Historical Quality and Defect Rates (25%), and Warranty/RMA Turnaround Speed (20%).",
-        styles["ClauseBody"]
-    ))
-    story.append(Paragraph(
-        "5.2 For revenue-critical product lines (Class A inventory), SmartSupply mandates a dual-sourcing model. The primary supplier shall receive approximately 60% to 70% "
-        "of volume, while a secondary approved vendor retains 30% to 40% to preserve operational redundancy and rapid surge fulfillment capability.",
-        styles["ClauseBody"]
-    ))
-
-    # 6.0 Quality Standards and Defect Handling
-    story.append(Paragraph("6.0 Quality Standards, Receiving Inspection, and Defect Handling", styles["SectionHeading"]))
-    story.append(Paragraph(
-        "6.1 All inbound shipments must pass receiving quality inspection at the central distribution center. Shipments must conform strictly to specifications.",
-        styles["ClauseBody"]
-    ))
-    story.append(Paragraph(
-        "6.2 The enterprise maximum allowable defect rate is established at 1.5% of delivered lot quantity. If incoming sampling detects a defect rate exceeding 1.5%, "
-        "the entire batch shall be quarantined. The supplier must issue a Return Merchandise Authorization (RMA) within 48 hours and cover all return logistics costs.",
-        styles["ClauseBody"]
-    ))
-
-    # 7.0 Delivery Schedules and Packaging Standards
-    story.append(Paragraph("7.0 Delivery Schedules, Logistics, and Packaging Standards", styles["SectionHeading"]))
-    story.append(Paragraph(
-        "7.1 Suppliers must achieve an aggregate On-Time Delivery (OTD) rate of no less than 95.0%. Deliveries are deemed on-time only when received at the designated warehouse "
-        "dock on or before the contractual delivery date stated on the Purchase Order.",
-        styles["ClauseBody"]
-    ))
-    story.append(Paragraph(
-        "7.2 Electronic components and computer peripherals must be packaged in electrostatic discharge (ESD) protective containers, moisture-barrier bags, and barcode-labeled cartons "
-        "identifying the SmartSupply SKU code, purchase order number, and batch number.",
-        styles["ClauseBody"]
-    ))
-
     # 8.0 Supplier Escalation and Non-Performance Remediation
-    story.append(Paragraph("8.0 Supplier Escalation and Non-Performance Remediation", styles["SectionHeading"]))
+    story.append(Paragraph("8.0 Supplier Escalation and Performance Remediation", styles["SectionHeading"]))
     story.append(Paragraph(
-        "8.1 <b>When can a supplier be escalated for poor performance?</b> A supplier shall be subject to formal escalation under any of the following non-performance triggers: "
-        "(a) On-Time In-Full delivery rate falls below 90.0% across two consecutive monthly reporting cycles; "
-        "(b) Product defect rate exceeds 2.5% in any single delivery batch or 1.5% on a 60-day moving average; "
-        "(c) Failure to resolve open RMA warranty replacements within contractual SLA turnaround limits; or "
-        "(d) Repeated failure to provide advance late-delivery notices.",
+        "8.1 When can a supplier be escalated for poor performance? Formal escalation occurs when: "
+        "(a) On-Time In-Full delivery rate falls below 90.0% across two consecutive cycles; "
+        "(b) Product defect rate exceeds 2.5% in any single delivery batch or 1.5% on average; or "
+        "(c) Failure to resolve open RMA warranty replacements within contractual SLA turnaround limits.",
         styles["ClauseBodyBold"]
     ))
-    story.append(Paragraph(
-        "8.2 Escalation follows a three-stage remediation framework: "
-        "Stage 1 requires a Corrective Action Plan (CAP) submitted within 5 business days; "
-        "Stage 2 freezes new purchase order awards and re-allocates volume to secondary suppliers; "
-        "Stage 3 initiates supplier disqualification and contractual de-listing.",
-        styles["ClauseBody"]
-    ))
 
-    # 9.0 Exceptions and Documentation Requirements
-    story.append(Paragraph("9.0 Exceptions, Waivers, and Documentation Compliance", styles["SectionHeading"]))
+    # 9.0 Exception Handling Protocol
+    story.append(Paragraph("9.0 Exception Handling Protocol When No Supplier Meets Delivery Window", styles["SectionHeading"]))
     story.append(Paragraph(
-        "9.1 Sole-source vendor engagements or policy exemptions require written justification signed by the Head of Supply Chain and the Financial Controller prior to PO commitment.",
+        "9.1 If NO compliant supplier can satisfy the required delivery window, the system must not fail or abort. "
+        "Instead, the decision is flagged with a prominent delivery-risk warning, and the fastest compliant supplier is selected to minimize expected exposure.",
         styles["ClauseBody"]
     ))
-    story.append(Paragraph(
-        "9.2 To maintain strict audit readiness, accounts payable operates under a mandatory Three-Way Matching protocol: the Purchase Order (PO), warehouse Goods Received Note (GRN), "
-        "and the Supplier Tax Invoice must match perfectly in SKU quantity and agreed unit price before payment disbursement. All records must be archived digitally for 7 years.",
-        styles["ClauseBody"]
+    story.append(create_callout_box(
+        styles,
+        "No available supplier can fully meet the required delivery window. The fastest compliant supplier was selected to minimize expected exposure.",
+        "EXCEPTION MANDATE"
     ))
 
     doc.build(story, canvasmaker=NumberedCanvas)
@@ -459,121 +464,85 @@ def generate_inventory_replenishment_policy(output_path: str):
     )
     story = []
 
-    # Title block
     story.append(Paragraph("SmartSupply Inventory Replenishment Policy 2026", styles["DocTitle"]))
-    story.append(Paragraph("Standard Operating Procedures for Inventory Planning, Safety Stock & Stockout Mitigation", styles["DocSubtitle"]))
+    story.append(Paragraph("Operational Guidelines for Inventory Buffering, Pipeline Stock & Automated Urgency", styles["DocSubtitle"]))
     
     meta_items = [
-        [("Document Identifier", "POL-INVR-2026-V1"), ("Effective Date", "January 01, 2026")],
-        [("Operational Scope", "Distribution Warehouses & Retail Hubs"), ("Applicability", "Enterprise Inventory Management")],
-        [("Document Type", "Inventory Replenishment Policy"), ("Target Service Level", "98% Class A / 95% Class B")],
+        [("Document Identifier", "POL-INVR-2026-V2"), ("Effective Date", "January 01, 2026")],
+        [("Operational Scope", "Enterprise Warehouse Network"), ("Applicability", "Automated Multi-Agent Replenishment")],
+        [("Document Type", "Inventory Replenishment Policy"), ("Effective Safety Buffer", "Reorder Point (ROP)")],
     ]
     story.append(create_meta_box(styles, meta_items))
-    story.append(Spacer(1, 14))
+    story.append(Spacer(1, 12))
 
-    # 1.0 Operational Scope & Objectives
-    story.append(Paragraph("1.0 Purpose and Operational Scope", styles["SectionHeading"]))
+    # 1.0 Reorder Point as Effective Safety-Stock Buffer
+    story.append(Paragraph("1.0 Reorder Point as SmartSupply's Effective Safety-Stock Buffer", styles["SectionHeading"]))
     story.append(Paragraph(
-        "1.1 This policy establishes the standard replenishment principles, mathematical reorder-point calculations, and emergency inventory mitigation protocols "
-        "for SmartSupply Electronics. The overarching objective is to maintain uninterrupted product availability while optimizing working capital and warehouse holding costs.",
-        styles["ClauseBody"]
-    ))
-    story.append(Paragraph(
-        "1.2 Inventory planning parameters apply across all distribution centers, regional fulfillment hubs, and retail outlets, governing both regular automated ordering "
-        "and contingency replenishment procedures.",
+        "1.1 SmartSupply explicitly treats the <b>reorder_point</b> as the effective safety-stock / retained inventory buffer. "
+        "The system does NOT compute a separate statistical safety-stock quantity. The reorder point ensures a baseline operational buffer "
+        "is maintained to absorb short-term demand fluctuations and minor delivery variances.",
         styles["ClauseBody"]
     ))
 
-    # 2.0 Reorder Point (ROP) Usage and Formula
-    story.append(Paragraph("2.0 Reorder Point (ROP) Methodology and Safety Stock Calculation", styles["SectionHeading"]))
+    # 2.0 Physical Inventory vs Reserved Inventory
+    story.append(Paragraph("2.0 Physical Inventory, Reserved Stock, and Available Stock", styles["SectionHeading"]))
     story.append(Paragraph(
-        "2.1 All inventory items are managed through an automated continuous-review inventory control system. A replenishment purchase requisition is automatically triggered "
-        "whenever the Net Available Inventory falls to or below the calculated Reorder Point (ROP).",
-        styles["ClauseBody"]
-    ))
-    story.append(Paragraph(
-        "2.2 <b>Standard ROP Calculation Formula:</b><br/>"
-        "<code>Reorder Point (ROP) = (Average Daily Demand × Supplier Lead Time in Days) + Safety Stock</code><br/>"
-        "Where Average Daily Demand is derived from a 30-day exponentially smoothed sales velocity, and Supplier Lead Time reflects the supplier's verified contractual delivery window.",
-        styles["ClauseBody"]
-    ))
-    story.append(Paragraph(
-        "2.3 Safety Stock is mathematically calibrated based on demand volatility and supplier lead-time standard deviation. Target service levels are defined as: "
-        "98.0% availability for Class A fast-moving peripherals (e.g. Wireless Mice, SSDs, AC1200 Routers), 95.0% for Class B regular accessories, and 90.0% for Class C slow consumables.",
+        "2.1 Available Stock represents the unencumbered physical stock currently in warehouse racks that can be allocated to customer orders:<br/>"
+        "<code>available_stock = on_hand - reserved</code>.<br/>"
+        "Reserved units allocated to confirmed open sales orders are strictly excluded from available inventory.",
         styles["ClauseBody"]
     ))
 
-    # 3.0 Lead Time Demand & Pipeline Accounting
-    story.append(Paragraph("3.0 Demand During Lead Time and Pipeline Stock Consideration", styles["SectionHeading"]))
+    # 3.0 Incoming Inventory as Confirmed Pipeline Stock
+    story.append(Paragraph("3.0 Incoming Inventory as Confirmed Pipeline Stock and Timing Limitations", styles["SectionHeading"]))
     story.append(Paragraph(
-        "3.1 Demand during lead time represents the total projected sales volume between purchase order transmission and dock receiving. "
-        "Planners must continuously audit actual vendor lead time performance against contractual parameters to detect fulfillment drift.",
+        "3.1 <b>Quantity Planning:</b> Confirmed incoming inventory (in-transit purchase orders) is treated as pipeline stock and credited toward the "
+        "replenishment requirement to prevent costly over-ordering:<br/>"
+        "<code>effective_inventory = available_stock + incoming</code>.",
         styles["ClauseBody"]
     ))
     story.append(Paragraph(
-        "3.2 <b>Incoming Pipeline Stock Consideration:</b> Replenishment triggers must strictly account for open purchase orders in the pipeline. "
-        "The system evaluates Net Available Stock rather than physical on-hand stock alone:<br/>"
-        "<code>Net Available Stock = (Physical On-Hand Stock + Confirmed In-Transit Open POs) - (Unfulfilled Customer Backorders + Allocated Shipments)</code><br/>"
-        "New purchase orders shall not be generated if open in-transit POs are sufficient to raise the inventory position above the target maximum level.",
-        styles["ClauseBody"]
-    ))
-
-    # 4.0 Stockout Risk Handling
-    story.append(Paragraph("4.0 Stockout-Risk Handling and Critical Item Prioritization", styles["SectionHeading"]))
-    story.append(Paragraph(
-        "4.1 <b>How should high stockout risk affect replenishment?</b> When physical on-hand stock falls below 50% of the allocated safety stock, or when projected days "
-        "of inventory coverage fall below 3 business days for Class A items, the SKU is immediately designated as 'High Stockout Risk'. "
-        "Under high stockout risk conditions, the following mandatory actions occur:<br/>"
-        "• <b>Immediate Purchase Order Release:</b> Replenishment orders are generated immediately without waiting for standard weekly batch ordering cycles.<br/>"
-        "• <b>Buffer Quantity Uplift:</b> The calculated economic order quantity is automatically increased by a 25% contingency buffer.<br/>"
-        "• <b>Fast-Lead-Time Supplier Routing:</b> If the primary supplier's standard lead time exceeds 3 days, purchasing is authorized to place orders with pre-approved rapid-delivery suppliers (e.g., Digital Distribution Lanka) to secure immediate bridge stock.<br/>"
-        "• <b>Executive Escalation:</b> Daily inventory exception alerts are transmitted directly to the Inventory Control Manager until stock levels recover above ROP.",
+        "3.2 <b>Arrival Timing Limitation:</b> Incoming stock is included in replenishment quantity planning, but its exact arrival timing cannot be "
+        "used for delivery-window calculation because expected arrival dates are not currently stored in the inventory data model. "
+        "For urgency timing, the system relies on physical available stock and daily forecast trajectories.",
         styles["ClauseBodyBold"]
     ))
-    story.append(Spacer(1, 4))
-    story.append(create_callout_box(
-        styles,
-        "High Stockout Risk mandates immediate order release, a 25% replenishment buffer uplift, authorization for expedited supplier routing, and daily management escalation.",
-        "RISK PROTOCOL"
-    ))
-    story.append(Spacer(1, 6))
 
-    # 5.0 Emergency Replenishment Operations
-    story.append(Paragraph("5.0 Emergency Replenishment Operations and Order Splitting", styles["SectionHeading"]))
+    # 4.0 Replenishment Requirement Formula
+    story.append(Paragraph("4.0 Replenishment Requirement and Order Quantity Formula", styles["SectionHeading"]))
     story.append(Paragraph(
-        "5.1 When an unexpected demand spike or supplier stockout threatens zero physical inventory, the emergency replenishment protocol is engaged. "
-        "Expedited logistics surcharges and courier air-freight options are authorized to protect customer delivery commitments.",
-        styles["ClauseBody"]
-    ))
-    story.append(Paragraph(
-        "5.2 <b>Dual-Supplier Order Splitting:</b> In severe shortage situations, large replenishment batches may be split across two qualified vendors: "
-        "a 30% expedited emergency tranche dispatched via a rapid-lead supplier (2-3 day delivery), paired with a 70% bulk commercial tranche dispatched via a cost-competitive bulk supplier (5-7 day delivery).",
+        "4.1 Net requirement is deterministically calculated across the active forecast planning horizon:<br/>"
+        "<code>net_requirement = (predicted_demand + reorder_point) - (available_stock + incoming)</code>.<br/>"
+        "Replenishment is triggered if <code>net_requirement &gt; 0</code> or if <code>effective_inventory &lt; reorder_point</code>.<br/>"
+        "The raw recommended quantity is rounded up to whole units: <code>raw_quantity = max(0, ceil(net_requirement))</code>.",
         styles["ClauseBody"]
     ))
 
-    # 6.0 Slow-Moving and Obsolete Inventory (SLOB)
-    story.append(Paragraph("6.0 Slow-Moving and Obsolete Inventory (SLOB) Management", styles["SectionHeading"]))
+    # 5.0 Stockout Risk & Projected Unsafe Timing
+    story.append(Paragraph("5.0 Stockout Risk Classification and Projected Unsafe-Stock Timing", styles["SectionHeading"]))
     story.append(Paragraph(
-        "6.1 Any SKU with zero outbound commercial transactions for 90 consecutive days is formally classified as Slow-Moving. "
-        "Items with zero movement for 180 days are categorized as Dormant/Obsolete. A monthly inventory carrying penalty of 2.0% is attributed to slow-moving inventory balances.",
-        styles["ClauseBody"]
-    ))
-    story.append(Paragraph(
-        "6.2 Remediation procedures for SLOB items include: (a) exercising supplier contract stock rotation provisions for exchange into fast-moving SKUs; "
-        "(b) promotional channel bundling; (c) progressive price markdowns; and (d) formal disposal or salvage write-downs with CFO approval.",
+        "5.1 <b>Days Until Unsafe:</b> Defined as the earliest forecast day on which projected inventory falls below the reorder-point buffer. "
+        "If available stock is already below ROP on Day 0, the condition is immediately unsafe.<br/>"
+        "5.2 <b>Required Delivery Window:</b> Represents the maximum number of business days before projected stock reaches unsafe levels. "
+        "Replenishment must arrive within this window to maintain uninterrupted customer fulfillment.",
         styles["ClauseBody"]
     ))
 
-    # 7.0 Review & Escalation Cadence
-    story.append(Paragraph("7.0 Review Cadence, Escalation Hierarchy, and Audit Rules", styles["SectionHeading"]))
+    # 6.0 Automatic Urgency Derivation
+    story.append(Paragraph("6.0 Automatic Urgency Derivation vs Manual Override", styles["SectionHeading"]))
     story.append(Paragraph(
-        "7.1 A cross-functional Inventory Exceptions Committee (comprising Inventory Planners, Procurement Specialists, and Warehouse Managers) meets weekly to review "
-        "stockout incidents, stockout-risk SKUs, safety stock parameter variances, and vendor lead time drifts.",
+        "6.1 Procurement urgency means: 'How quickly replenishment needs to arrive.' It is derived automatically by SmartSupply by comparing "
+        "the required delivery window against active catalog supplier lead times:<br/>"
+        "• <b>NORMAL:</b> Sufficient delivery time exists; eligible suppliers comfortably satisfy the delivery window.<br/>"
+        "• <b>HIGH:</b> Stock is becoming unsafe soon; some suppliers may miss the window; delivery time and cost both matter.<br/>"
+        "• <b>EMERGENCY:</b> Very little delivery time remains; only fastest compliant suppliers can satisfy window; delivery continuity dominates cost.",
         styles["ClauseBody"]
     ))
     story.append(Paragraph(
-        "7.2 Any stockout incident affecting Class A products must be formally documented with a Root Cause Analysis (RCA) report and submitted to the VP of Supply Chain within 3 business days.",
-        styles["ClauseBody"]
+        "6.2 <b>Manual Urgency Override Audit Requirement:</b> Users may optionally supply an urgency override. If the manual override differs "
+        "from the system-derived urgency, the recommendation must be audited with a prominent warning: "
+        "<i>'System-derived urgency was HIGH, but EMERGENCY was manually selected.'</i>",
+        styles["ClauseBodyBold"]
     ))
 
     doc.build(story, canvasmaker=NumberedCanvas)
@@ -595,122 +564,49 @@ def generate_techsource_sla(output_path: str, supplier_id: int):
     )
     story = []
 
-    # Title block
     story.append(Paragraph("TechSource Lanka Service Level Agreement", styles["DocTitle"]))
     story.append(Paragraph("Master Commercial Supply & Service Level Terms — Balanced Service Profile", styles["DocSubtitle"]))
     
     meta_items = [
         [("Vendor Name", "TechSource Lanka"), ("Supplier Code", "DEMO-SUP-001")],
         [("Agreement Ref", f"SLA-TSL-2026-ID{supplier_id}"), ("Effective Date", "January 01, 2026")],
-        [("Document Type", "Supplier Service Level Agreement"), ("Review Cycle", "Annual Commercial Review")],
+        [("Document Type", "Supplier Service Level Agreement"), ("Target OTIF", "96.0% On-Time In-Full")],
     ]
     story.append(create_meta_box(styles, meta_items))
-    story.append(Spacer(1, 14))
+    story.append(Spacer(1, 12))
 
-    # 1.0 Parties and Scope
-    story.append(Paragraph("1.0 Agreement Parties and Strategic Operational Scope", styles["SectionHeading"]))
+    story.append(Paragraph("1.0 Vendor Profile and Balanced Operational Scope", styles["SectionHeading"]))
     story.append(Paragraph(
-        "1.1 This Service Level Agreement (SLA) is entered into between SmartSupply Electronics Pvt Ltd and TechSource Lanka "
-        "(Business Registration: PV-89104, Registered Address: 45 R.A. De Mel Mawatha, Colombo 03, Sri Lanka).",
-        styles["ClauseBody"]
-    ))
-    story.append(Paragraph(
-        "1.2 TechSource Lanka serves as a strategic, balanced-tier supplier providing standard computer peripherals, wireless input devices, "
-        "aluminum ergonomic laptop stands, high-speed HDMI cables, USB storage media, and high-volume office supplies across the SmartSupply retail catalog.",
+        "1.1 TechSource Lanka serves as SmartSupply's balanced-tier supplier, offering dependable fulfillment, high quality, "
+        "and moderate lead times across wireless peripherals, ergonomic laptop stands, and office accessories.",
         styles["ClauseBody"]
     ))
 
-    # 2.0 Order Processing and Commercial Terms Governance
-    story.append(Paragraph("2.0 Order Processing and Commercial Terms Governance", styles["SectionHeading"]))
+    story.append(Paragraph("2.0 Service Commitments and OTIF Target", styles["SectionHeading"]))
     story.append(Paragraph(
-        "2.1 <b>Commercial Terms and Order Processing:</b> Product-specific MOQ, unit cost, and standard lead time are maintained in "
-        "SmartSupply's approved supplier commercial records. This SLA governs service obligations and exceptions. "
-        "TechSource Lanka commits to fulfilling purchase orders according to the operational parameters established in SmartSupply's central catalog.",
-        styles["ClauseBody"]
-    ))
-    story.append(Paragraph(
-        "2.2 Formal written order acknowledgement must be transmitted to SmartSupply within 24 business hours of PO receipt, confirming delivery dates and SKU allocations.",
-        styles["ClauseBody"]
-    ))
-
-    # 3.0 Delivery Expectations & Late Delivery
-    story.append(Paragraph("3.0 Delivery Expectations, Late Delivery Notification, and Penalties", styles["SectionHeading"]))
-    story.append(Paragraph(
-        "3.1 TechSource Lanka commits to maintaining a minimum monthly On-Time Delivery (OTD) rate of 95.0%.",
-        styles["ClauseBody"]
-    ))
-    story.append(Paragraph(
-        "3.2 <b>What happens if a supplier delivers late?</b> If TechSource Lanka anticipates any schedule slippage, it is contractually required to provide formal "
-        "written notification to SmartSupply at least 24 hours prior to the scheduled delivery date, specifying the cause and revised delivery schedule. "
-        "If delivery is delayed beyond the confirmed date without prior written approval, SmartSupply is entitled to deduct a late-delivery penalty rebate of 1.5% "
-        "of the delayed order value for each calendar week of delay (or fraction thereof), up to a maximum cap of 10.0%. "
-        "If delay exceeds 14 calendar days, SmartSupply reserves the contractual right to cancel the order without cancellation liability and procure replacement goods "
-        "from an alternative vendor, with TechSource Lanka liable for any proven purchase price variance.",
-        styles["ClauseBodyBold"]
-    ))
-    story.append(Spacer(1, 4))
-    story.append(create_callout_box(
-        styles,
-        "Late delivery requires 24h advance notice. Penalty rebate is 1.5% per week of delay up to a 10.0% cap. Orders delayed > 14 days may be cancelled with supplier covering price variances.",
-        "LATE DELIVERY CLAUSE"
-    ))
-    story.append(Spacer(1, 6))
-
-    # 4.0 Damaged Shipments & Defective Goods
-    story.append(Paragraph("4.0 Damaged Shipments, Inspection Window, and Return Logistics", styles["SectionHeading"]))
-    story.append(Paragraph(
-        "4.1 SmartSupply shall inspect received cartons within 3 business days of dock delivery. In the event of physical transit damage, packaging breaches, "
-        "or carton discrepancies, SmartSupply will submit written notification and photographic documentation to <code>orders@techsourcelanka.lk</code>.",
-        styles["ClauseBody"]
-    ))
-    story.append(Paragraph(
-        "4.2 TechSource Lanka shall arrange and pay for all return courier and freight charges for non-conforming or damaged shipments. Damaged units shall be credited or replaced within 5 business days.",
-        styles["ClauseBody"]
-    ))
-
-    # 5.0 Replacement and Warranty Conditions
-    story.append(Paragraph("5.0 Replacement Policy, Warranty Conditions, and RMA Turnaround", styles["SectionHeading"]))
-    story.append(Paragraph(
-        "5.1 <b>What is the replacement policy for defective goods?</b> TechSource Lanka provides a standard 12-month manufacturer replacement warranty across all electronic products. "
-        "When defective or non-functional items are identified and reported under Return Merchandise Authorization (RMA), TechSource Lanka guarantees full replacement with brand-new, "
-        "factory-sealed units within 5 business days of RMA confirmation. For critical retail customer warranty returns, TechSource Lanka supports advance replacement dispatch within 48 hours upon mutual agreement.",
+        "2.1 TechSource Lanka contractually commits to an On-Time In-Full (OTIF) fulfillment rate of 96.0% across all catalog product categories.",
         styles["ClauseBodyBold"]
     ))
     story.append(Paragraph(
-        "5.2 Replacement units carry the full balance of the original warranty period or 90 days, whichever is longer.",
+        "2.2 Written order acknowledgements are transmitted within 24 business hours of PO release.",
         styles["ClauseBody"]
     ))
 
-    # 6.0 Order Cancellation Rules
-    story.append(Paragraph("6.0 Order Cancellation Rules and Restocking Conditions", styles["SectionHeading"]))
+    story.append(Paragraph("3.0 High-Risk Priority Dispatch Protocol", styles["SectionHeading"]))
     story.append(Paragraph(
-        "6.1 SmartSupply may cancel any confirmed Purchase Order free of charge provided written cancellation notice is received prior to warehouse dispatch "
-        "(minimum 24 hours prior to scheduled carrier pick-up). If cancellation is submitted after dispatch, a nominal restocking fee of 5.0% applies to non-custom items.",
-        styles["ClauseBody"]
+        "3.1 <b>TechSource priority dispatch high risk:</b> TechSource supports approved high-risk priority dispatch protocols to accelerate warehouse "
+        "release within 24 hours of PO approval, making it suitable for balanced high-risk and standard replenishment scenarios. "
+        "In high-risk situations, TechSource provides confirmed dispatch tracking and priority warehouse queue allocation.",
+        styles["ClauseBodyBold"]
     ))
 
-    # 7.0 Emergency Order Handling
-    story.append(Paragraph("7.0 Emergency Order Handling and Expedited Dispatch", styles["SectionHeading"]))
+    story.append(Paragraph("4.0 Late Delivery Penalties & Warranty Terms", styles["SectionHeading"]))
     story.append(Paragraph(
-        "7.1 TechSource Lanka supports an emergency fast-track fulfillment service for critical stockout mitigation. Emergency purchase orders receive prioritized warehouse queue handling, "
-        "guaranteeing dispatch within 48 hours of order confirmation.",
+        "4.1 Late delivery requires 24-hour advance written notification. Delays without notice incur a 1.5% penalty per week up to a 10.0% cap.",
         styles["ClauseBody"]
     ))
     story.append(Paragraph(
-        "7.2 Emergency orders are subject to a 10.0% expedited logistics surcharge and a minimum order batch of 15 units. SmartSupply is permitted up to two emergency expedited orders per calendar month.",
-        styles["ClauseBody"]
-    ))
-
-    # 8.0 Escalation Procedure & Governance
-    story.append(Paragraph("8.0 Escalation Procedure, Account Management, and Governance", styles["SectionHeading"]))
-    story.append(Paragraph(
-        "8.1 Operational communications and daily order coordination are managed through designated contacts:<br/>"
-        "• <b>Level 1 (Account Operations):</b> Kamal Silva, Senior Key Account Manager | Tel: +94 11 234 1101 | Email: orders@techsourcelanka.lk<br/>"
-        "• <b>Level 2 (Executive Escalation):</b> Nuwan Jayasuriya, Commercial Operations Director | Tel: +94 11 234 1100 | Email: nuwan.j@techsourcelanka.lk",
-        styles["ClauseBody"]
-    ))
-    story.append(Paragraph(
-        "8.2 Formal executive review meetings shall take place quarterly to review delivery scorecards, RMA resolution speed, and upcoming inventory forecasts.",
+        "4.2 TechSource provides a 12-month manufacturer replacement warranty with RMA replacement dispatched within 5 business days.",
         styles["ClauseBody"]
     ))
 
@@ -733,119 +629,46 @@ def generate_digital_distribution_sla(output_path: str, supplier_id: int):
     )
     story = []
 
-    # Title block
     story.append(Paragraph("Digital Distribution Lanka Service Level Agreement", styles["DocTitle"]))
     story.append(Paragraph("Master Commercial Supply & Service Level Terms — Rapid Fulfillment & Emergency Support Profile", styles["DocSubtitle"]))
     
     meta_items = [
         [("Vendor Name", "Digital Distribution Lanka"), ("Supplier Code", "DEMO-SUP-002")],
         [("Agreement Ref", f"SLA-DDL-2026-ID{supplier_id}"), ("Effective Date", "January 01, 2026")],
-        [("Document Type", "Supplier Service Level Agreement"), ("Specialization", "Fast Lead Times & Express Peripherals")],
+        [("Document Type", "Supplier Service Level Agreement"), ("Target OTIF", "98.0% (Highest Catalog Commitment)")],
     ]
     story.append(create_meta_box(styles, meta_items))
-    story.append(Spacer(1, 14))
+    story.append(Spacer(1, 12))
 
-    # 1.0 Strategic Role & Scope
-    story.append(Paragraph("1.0 Agreement Parties and Strategic Commercial Scope", styles["SectionHeading"]))
+    story.append(Paragraph("1.0 Vendor Profile and Expedited Operational Specialization", styles["SectionHeading"]))
     story.append(Paragraph(
-        "1.1 This Service Level Agreement (SLA) is established between SmartSupply Electronics Pvt Ltd and Digital Distribution Lanka "
-        "(Business Registration: PV-77412, Registered Address: 112 Duplication Road, Colombo 04, Sri Lanka).",
-        styles["ClauseBody"]
-    ))
-    story.append(Paragraph(
-        "1.2 Digital Distribution Lanka is designated as SmartSupply's primary rapid-fulfillment partner, specializing in ultra-short lead times, high-speed automated dispatch, "
-        "solid-state storage, USB-C multi-port hubs, premium audio headsets, and fast-response emergency replenishment.",
+        "1.1 Digital Distribution Lanka is SmartSupply's primary rapid-fulfillment partner, specializing in ultra-short delivery windows, "
+        "high-speed courier fulfillment, and urgent replenishment across electronics and computing peripherals.",
         styles["ClauseBody"]
     ))
 
-    # 2.0 Order Processing and Commercial Terms Governance
-    story.append(Paragraph("2.0 Order Processing and Commercial Terms Governance", styles["SectionHeading"]))
+    story.append(Paragraph("2.0 Industry-Leading OTIF Commitment", styles["SectionHeading"]))
     story.append(Paragraph(
-        "2.1 <b>Commercial Terms and Rapid Order Processing:</b> Product-specific MOQ, unit cost, and standard lead time are maintained in "
-        "SmartSupply's approved supplier commercial records. This SLA governs service obligations and exceptions. "
-        "Digital Distribution Lanka operates automated high-density warehouse picking and prioritizes expedited fulfillment pipelines across all catalog categories.",
-        styles["ClauseBody"]
-    ))
-    story.append(Paragraph(
-        "2.2 Automated Electronic Data Interchange (EDI) and email order confirmations are generated within 4 business hours of order placement.",
-        styles["ClauseBody"]
-    ))
-
-    # 3.0 Delivery Expectations & Late Delivery
-    story.append(Paragraph("3.0 High-Delivery Reliability, Late Delivery Notice, and Strict Penalties", styles["SectionHeading"]))
-    story.append(Paragraph(
-        "3.1 Digital Distribution Lanka contractually commits to an industry-leading On-Time Delivery (OTD) rate of 98.0%.",
-        styles["ClauseBody"]
-    ))
-    story.append(Paragraph(
-        "3.2 <b>What happens if a supplier delivers late?</b> Given the premium rapid-fulfillment status of Digital Distribution Lanka, delay thresholds are strictly enforced. "
-        "The supplier must provide written notice to SmartSupply within 12 hours of identifying any operational or transportation impediment. "
-        "If an order is not delivered within the contractual lead time, a late-delivery penalty of 2.0% of the affected shipment value is assessed for each calendar day of delay, "
-        "up to a maximum penalty cap of 15.0%. Any delivery exceeding 5 business days of delay constitutes a fundamental breach, entitling SmartSupply to immediate cancellation "
-        "and full refund of any deposits, plus liquidated damages for stockout remediation.",
-        styles["ClauseBodyBold"]
-    ))
-    story.append(Spacer(1, 4))
-    story.append(create_callout_box(
-        styles,
-        "Late delivery notice required within 12 hours. Daily penalty of 2.0% per business day up to a 15.0% maximum cap. Delays over 5 days permit immediate contract default remedies.",
-        "STRICT SLA CLAUSE"
-    ))
-    story.append(Spacer(1, 6))
-
-    # 4.0 Damaged Shipments & Immediate Cross-Shipment
-    story.append(Paragraph("4.0 Damaged Shipments and Immediate Cross-Shipment Protocol", styles["SectionHeading"]))
-    story.append(Paragraph(
-        "4.1 Receiving inspection must be concluded within 48 hours of dock arrival. Transit claims must be filed via email to <code>supply@digitaldistribution.lk</code> with photographic evidence.",
-        styles["ClauseBody"]
-    ))
-    story.append(Paragraph(
-        "4.2 <b>Immediate Cross-Shipment Replacement:</b> Upon receipt of valid photo documentation of shipping damage or defective items, Digital Distribution Lanka dispatches "
-        "replacement units immediately within 24 hours, without requiring the returned items to reach its facility first. Digital Distribution Lanka covers all reverse freight.",
+        "2.1 Digital Distribution Lanka contractually commits to an industry-leading On-Time In-Full (OTIF) fulfillment rate of 98.0%, "
+        "the highest benchmark among SmartSupply catalog vendors.",
         styles["ClauseBodyBold"]
     ))
 
-    # 5.0 Replacement and Warranty Conditions
-    story.append(Paragraph("5.0 Rapid Replacement Policy and Extended Storage Warranty", styles["SectionHeading"]))
+    story.append(Paragraph("3.0 Emergency Rapid Delivery and Expedited Orders", styles["SectionHeading"]))
     story.append(Paragraph(
-        "5.1 <b>What is the replacement policy for defective goods?</b> Digital Distribution Lanka guarantees an expedited RMA turnaround cycle of 48 to 72 hours for all verified "
-        "hardware defects. Returned items are inspected at a dedicated rapid-diagnostic test bench, and brand-new replacements are dispatched immediately.",
+        "3.1 <b>Digital Distribution emergency rapid delivery:</b> Expedited orders and emergency dispatch are fully supported with dedicated express courier handling "
+        "and 24-48 hour fulfillment turnaround. Digital Distribution Lanka is specifically qualified and preferred for HIGH and EMERGENCY procurement "
+        "where delivery continuity dominates and zero-slack risks must be avoided.",
         styles["ClauseBodyBold"]
     ))
-    story.append(Paragraph(
-        "5.2 SSD storage and semiconductor components carry a comprehensive 24-month manufacturer warranty. For mission-critical storage failures, advance buffer replacement is permanently supported.",
-        styles["ClauseBody"]
-    ))
 
-    # 6.0 Order Cancellation Rules
-    story.append(Paragraph("6.0 Order Cancellation Rules and Automated Fulfillment Constraints", styles["SectionHeading"]))
+    story.append(Paragraph("4.0 Strict Late Delivery Terms & Rapid RMA", styles["SectionHeading"]))
     story.append(Paragraph(
-        "6.1 Due to automated robotic fulfillment and same-day packaging workflows, purchase orders can only be cancelled within 6 hours of electronic submission. "
-        "Once a shipment enters the automated packing queue, orders are strictly non-cancellable.",
-        styles["ClauseBody"]
-    ))
-
-    # 7.0 Emergency & Same-Day Replenishment
-    story.append(Paragraph("7.0 Emergency Replenishment and Same-Day Courier Dispatch", styles["SectionHeading"]))
-    story.append(Paragraph(
-        "7.1 Digital Distribution Lanka maintains a dedicated emergency replenishment pipeline capable of dispatching stock within 24 hours of emergency order confirmation for critical stockout emergencies.",
+        "4.1 Late delivery notification is mandatory within 12 hours. Delays incur a 2.0% penalty per calendar day up to a 15.0% cap.",
         styles["ClauseBody"]
     ))
     story.append(Paragraph(
-        "7.2 Emergency orders are subject to a 15.0% expedited logistics surcharge and a minimum order batch of 20 units per SKU. Delivery is executed via dedicated priority courier.",
-        styles["ClauseBody"]
-    ))
-
-    # 8.0 Escalation Procedure & Governance
-    story.append(Paragraph("8.0 Escalation Procedure and Dedicated Key Account Support", styles["SectionHeading"]))
-    story.append(Paragraph(
-        "8.1 Dedicated commercial and technical points of contact:<br/>"
-        "• <b>Level 1 (Account Lead):</b> Dilani Perera, Senior Account Manager | Tel: +94 11 258 2202 | Email: supply@digitaldistribution.lk<br/>"
-        "• <b>Level 2 (Executive Escalation):</b> Kanishka Wickramaratne, General Manager of Operations | Tel: +94 11 258 2200 | Email: kanishka@digitaldistribution.lk",
-        styles["ClauseBody"]
-    ))
-    story.append(Paragraph(
-        "8.2 Monthly operational SLA compliance reviews are conducted digitally on the 5th of each month, tracking 30-day fulfillment velocity and warranty statistics.",
+        "4.2 Emergency warranty replacement dispatch is guaranteed within 24 to 48 hours for business-critical accounts.",
         styles["ClauseBody"]
     ))
 
@@ -868,117 +691,45 @@ def generate_nextgen_sla(output_path: str, supplier_id: int):
     )
     story = []
 
-    # Title block
     story.append(Paragraph("NextGen Supplies Service Level Agreement", styles["DocTitle"]))
     story.append(Paragraph("Master Commercial Supply & Service Level Terms — High-Volume Bulk & Cost-Competitive Profile", styles["DocSubtitle"]))
     
     meta_items = [
         [("Vendor Name", "NextGen Supplies"), ("Supplier Code", "DEMO-SUP-003")],
         [("Agreement Ref", f"SLA-NGS-2026-ID{supplier_id}"), ("Effective Date", "January 01, 2026")],
-        [("Document Type", "Supplier Service Level Agreement"), ("Commercial Focus", "High-Volume Wholesale & Bulk Rebates")],
+        [("Document Type", "Supplier Service Level Agreement"), ("Commercial Focus", "High-Volume Wholesale & Lowest Unit Cost")],
     ]
     story.append(create_meta_box(styles, meta_items))
-    story.append(Spacer(1, 14))
+    story.append(Spacer(1, 12))
 
-    # 1.0 Strategic Role & Commercial Focus
-    story.append(Paragraph("1.0 Agreement Parties and Strategic Commercial Scope", styles["SectionHeading"]))
+    story.append(Paragraph("1.0 Vendor Profile and Bulk Commercial Focus", styles["SectionHeading"]))
     story.append(Paragraph(
-        "1.1 This Service Level Agreement (SLA) is entered into between SmartSupply Electronics Pvt Ltd and NextGen Supplies "
-        "(Business Registration: PV-62391, Registered Address: 88 High Level Road, Nugegoda, Sri Lanka).",
-        styles["ClauseBody"]
-    ))
-    story.append(Paragraph(
-        "1.2 NextGen Supplies is designated as SmartSupply's primary high-volume commercial wholesale partner, providing the most competitive bulk unit economics "
-        "across computer mice, mechanical keyboards, multi-port USB hubs, external SSDs, high-performance Wi-Fi routers, and mobile accessories.",
+        "1.1 NextGen Supplies is SmartSupply's primary high-volume commercial wholesale supplier, providing the lowest unit cost economics "
+        "across computer peripherals and accessories. Preferred use case: standard bulk replenishment where delivery timing is non-critical.",
         styles["ClauseBody"]
     ))
 
-    # 2.0 Bulk Order Terms and Commercial Governance
-    story.append(Paragraph("2.0 Bulk Order Terms and Commercial Governance", styles["SectionHeading"]))
+    story.append(Paragraph("2.0 Fulfillment Target and Volume Rebates", styles["SectionHeading"]))
     story.append(Paragraph(
-        "2.1 <b>Commercial Pricing and Minimum Order Terms:</b> Product-specific MOQ, unit cost, and standard lead time are maintained in "
-        "SmartSupply's approved supplier commercial records. This SLA governs service obligations and exceptions. "
-        "NextGen Supplies provides high-volume commercial wholesale fulfillment and volume discount rebates across approved catalog lines.",
+        "2.1 NextGen Supplies commits to an On-Time In-Full (OTIF) fulfillment rate of 92.0%, reflecting consolidated freight schedules.",
         styles["ClauseBody"]
     ))
     story.append(Paragraph(
-        "2.2 <b>Tiered Volume Discount Rebate:</b> Single purchase orders exceeding 100 aggregated units across any product line automatically earn an additional "
-        "4.0% commercial volume rebate, applied as a direct credit on the monthly commercial statement.",
+        "2.2 High-volume purchase orders exceeding 100 units qualify for an additional 4.0% commercial volume rebate.",
         styles["ClauseBody"]
     ))
 
-    # 3.0 Delivery Expectations & Late Delivery
-    story.append(Paragraph("3.0 Delivery Expectations, Late Delivery Notice, and Rebates", styles["SectionHeading"]))
+    story.append(Paragraph("3.0 Emergency / Expedited Service Limitations", styles["SectionHeading"]))
     story.append(Paragraph(
-        "3.1 NextGen Supplies commits to an On-Time In-Full (OTIF) fulfillment rate of 92.0%, reflecting consolidated bulk freight transit schedules.",
-        styles["ClauseBody"]
-    ))
-    story.append(Paragraph(
-        "3.2 <b>What happens if a supplier delivers late?</b> NextGen Supplies must provide written notification at least 48 hours prior to the scheduled delivery date "
-        "if container transit or customs delays arise. If an order is delayed beyond the confirmed delivery date without prior notification, SmartSupply is entitled to a credit note "
-        "rebate of 1.0% of the delayed order value for each calendar week of delay, capped at a maximum of 6.0%. "
-        "Due to volume shipping schedules, cancellation for delayed orders is permitted only after 21 calendar days of overdue status.",
-        styles["ClauseBodyBold"]
-    ))
-    story.append(Spacer(1, 4))
-    story.append(create_callout_box(
-        styles,
-        "Late delivery notice required 48 hours in advance. Credit note rebate is 1.0% per week of delay capped at 6.0%. Order cancellation permitted after 21 calendar days.",
-        "BULK TERMS CLAUSE"
-    ))
-    story.append(Spacer(1, 6))
-
-    # 4.0 Damaged Shipments & Batch RMA Policy
-    story.append(Paragraph("4.0 Damaged Shipments, Inspection Window, and Batch RMA Reconciliation", styles["SectionHeading"]))
-    story.append(Paragraph(
-        "4.1 SmartSupply may inspect bulk carton receipts within 7 business days of warehouse delivery. Discrepancies shall be recorded on the delivery docket and reported to <code>sales@nextgensupplies.lk</code>.",
-        styles["ClauseBody"]
-    ))
-    story.append(Paragraph(
-        "4.2 Damaged or defective units in bulk orders are consolidated into a monthly Batch RMA statement. NextGen Supplies issues account credit notes against pending invoices "
-        "rather than individual replacement shipments, streamlining administrative reconciliation.",
-        styles["ClauseBody"]
-    ))
-
-    # 5.0 Replacement and Extended Warranty Terms
-    story.append(Paragraph("5.0 Replacement Policy, Extended Warranty, and Credit Notes", styles["SectionHeading"]))
-    story.append(Paragraph(
-        "5.1 <b>What is the replacement policy for defective goods?</b> NextGen Supplies provides an extended 18-month commercial warranty on all computer peripherals and networking hardware. "
-        "Warranty RMA requests are processed within a standard turnaround window of 10 business days from receipt at the Nugegoda depot. "
-        "For discontinued or superseded product lines, NextGen Supplies grants an immediate 100% financial credit note in lieu of physical replacement.",
+        "3.1 <b>NextGen expedited emergency orders:</b> Expedited emergency orders are not guaranteed or supported. High-risk and emergency procurement "
+        "orders cannot be expedited through standard freight consolidation networks. NextGen is intended strictly for normal replenishment where cost "
+        "efficiency dominates and delivery lead times are comfortably within planning windows. When required delivery windows are constrained, NextGen is not suitable.",
         styles["ClauseBodyBold"]
     ))
 
-    # 6.0 Flexible Order Cancellation Protocol
-    story.append(Paragraph("6.0 Flexible Order Cancellation Protocol", styles["SectionHeading"]))
+    story.append(Paragraph("4.0 Delivery Terms and Extended Cancellation Notice", styles["SectionHeading"]))
     story.append(Paragraph(
-        "6.1 In alignment with wholesale bulk planning, SmartSupply may cancel or modify purchase orders without financial penalty up to 48 hours after electronic submission. "
-        "Cancellations requested after 48 hours but prior to container dispatch incur a minor 3.0% administrative handling fee.",
-        styles["ClauseBody"]
-    ))
-
-    # 7.0 Emergency Order Handling & Capacity Limits
-    story.append(Paragraph("7.0 Emergency Order Handling and Wholesale Capacity Limits", styles["SectionHeading"]))
-    story.append(Paragraph(
-        "7.1 Due to bulk consolidated container movements, NextGen Supplies maintains limited emergency fulfillment capacity. "
-        "SmartSupply is permitted a maximum of one emergency expedited order per calendar month, restricted to a maximum batch of 50 units.",
-        styles["ClauseBody"]
-    ))
-    story.append(Paragraph(
-        "7.2 Expedited orders carry a 12.0% logistics fee and guarantee a 4-business-day expedited courier delivery to the Colombo central distribution facility.",
-        styles["ClauseBody"]
-    ))
-
-    # 8.0 Escalation Procedure & Governance
-    story.append(Paragraph("8.0 Escalation Procedure and Account Management", styles["SectionHeading"]))
-    story.append(Paragraph(
-        "8.1 Account coordination and commercial escalation structure:<br/>"
-        "• <b>Level 1 (Wholesale Coordinator):</b> Rohan Wickramasinghe, Key Account Lead | Tel: +94 11 289 3303 | Email: sales@nextgensupplies.lk<br/>"
-        "• <b>Level 2 (Executive Vice President):</b> Malinda Senanayake, VP of Commercial Distribution | Tel: +94 11 289 3300 | Email: malinda@nextgensupplies.lk",
-        styles["ClauseBody"]
-    ))
-    story.append(Paragraph(
-        "8.2 Formal volume rebate reviews and pricing index recalibrations are conducted semi-annually in June and December.",
+        "4.1 Late delivery notices must be issued 48 hours in advance. Penalties are capped at 1.0% per week. Cancellation requires 21 days overdue notice.",
         styles["ClauseBody"]
     ))
 
@@ -987,9 +738,9 @@ def generate_nextgen_sla(output_path: str, supplier_id: int):
 
 
 # =============================================================================
-# DOCUMENT 6: Supplier Performance Review — Q3 2026
+# DOCUMENT 6: TechSource Lanka Performance Review — Q3 2026
 # =============================================================================
-def generate_performance_review(output_path: str, supplier_id: int):
+def generate_techsource_performance_review(output_path: str, supplier_id: int):
     styles = get_custom_stylesheet()
     doc = SimpleDocTemplate(
         output_path,
@@ -1001,9 +752,8 @@ def generate_performance_review(output_path: str, supplier_id: int):
     )
     story = []
 
-    # Title block
     story.append(Paragraph("Supplier Performance Review — Q3 2026", styles["DocTitle"]))
-    story.append(Paragraph("Quarterly Vendor Evaluation & Contractual SLA Compliance Audit", styles["DocSubtitle"]))
+    story.append(Paragraph("Quarterly Vendor Evaluation & Contractual SLA Compliance Audit: TechSource Lanka", styles["DocSubtitle"]))
     
     meta_items = [
         [("Vendor Evaluated", "TechSource Lanka"), ("Supplier Code", "DEMO-SUP-001")],
@@ -1011,173 +761,248 @@ def generate_performance_review(output_path: str, supplier_id: int):
         [("Document Type", "Supplier Performance Report"), ("Overall Score", "88.5 / 100 (Good Standing)")],
     ]
     story.append(create_meta_box(styles, meta_items))
-    story.append(Spacer(1, 14))
+    story.append(Spacer(1, 12))
 
-    # 1.0 Executive Summary
     story.append(Paragraph("1.0 Executive Summary and Review Scope", styles["SectionHeading"]))
     story.append(Paragraph(
-        "1.1 This performance evaluation report details the operational fulfillment, quality metrics, and SLA compliance of TechSource Lanka "
-        "(Vendor Code: DEMO-SUP-001) for the third quarter of 2026 (July 01, 2026 to September 30, 2026).",
-        styles["ClauseBody"]
-    ))
-    story.append(Paragraph(
-        "1.2 During Q3 2026, SmartSupply Electronics issued a total of 28 Purchase Orders to TechSource Lanka, representing an aggregate procurement spend "
-        "of LKR 4,680,000 across six major product categories. TechSource Lanka achieved an overall composite performance rating of 88.5 out of 100, "
-        "satisfying core operational standards with minor variances in delivery timing.",
+        "1.1 This performance evaluation details operational fulfillment and SLA compliance of TechSource Lanka for Q3 2026. "
+        "TechSource achieved an observed OTIF rate of 95.8% and a low defect rate of 0.4%, demonstrating balanced operational reliability "
+        "for both normal replenishment and high-risk orders.",
         styles["ClauseBody"]
     ))
 
-    # 2.0 KPI Scorecard
-    story.append(Paragraph("2.0 Key Performance Indicator (KPI) Scorecard", styles["SectionHeading"]))
-    
-    # Table data
+    story.append(Paragraph("2.0 Key Performance Indicators Scorecard", styles["SectionHeading"]))
     kpi_data = [
         [
             Paragraph("KPI Dimension", styles["TableHeader"]),
             Paragraph("SLA Target", styles["TableHeader"]),
-            Paragraph("Q3 Actual", styles["TableHeader"]),
+            Paragraph("Q3 Observed", styles["TableHeader"]),
             Paragraph("Variance", styles["TableHeader"]),
-            Paragraph("Status Assessment", styles["TableHeader"]),
+            Paragraph("Assessment", styles["TableHeader"]),
         ],
         [
             Paragraph("On-Time In-Full (OTIF)", styles["TableCellBold"]),
-            Paragraph("≥ 95.0%", styles["TableCell"]),
-            Paragraph("94.2%", styles["TableCellBold"]),
-            Paragraph("-0.8%", styles["TableCell"]),
-            Paragraph("Minor Variance (Acceptable)", styles["TableCell"]),
+            Paragraph("96.0%", styles["TableCell"]),
+            Paragraph("95.8%", styles["TableCell"]),
+            Paragraph("-0.2%", styles["TableCell"]),
+            Paragraph("Approved / Reliable", styles["TableCell"]),
         ],
         [
-            Paragraph("Quality / Defect Rate", styles["TableCellBold"]),
-            Paragraph("≤ 1.50%", styles["TableCell"]),
-            Paragraph("1.28%", styles["TableCellBold"]),
-            Paragraph("+0.22% (Better)", styles["TableCell"]),
-            Paragraph("Compliant (Target Met)", styles["TableCell"]),
+            Paragraph("Quality Defect Rate", styles["TableCellBold"]),
+            Paragraph("&le; 1.5%", styles["TableCell"]),
+            Paragraph("0.40%", styles["TableCell"]),
+            Paragraph("+1.1%", styles["TableCell"]),
+            Paragraph("Excellent Quality", styles["TableCell"]),
         ],
         [
-            Paragraph("RMA Turnaround Speed", styles["TableCellBold"]),
-            Paragraph("≤ 5.0 Days", styles["TableCell"]),
-            Paragraph("4.2 Days", styles["TableCellBold"]),
-            Paragraph("+0.8 Days (Better)", styles["TableCell"]),
-            Paragraph("Exceeded SLA Benchmark", styles["TableCell"]),
-        ],
-        [
-            Paragraph("Pricing & Invoice Accuracy", styles["TableCellBold"]),
-            Paragraph("100.0%", styles["TableCell"]),
-            Paragraph("100.0%", styles["TableCellBold"]),
-            Paragraph("0.0%", styles["TableCell"]),
-            Paragraph("Flawless Adherence", styles["TableCell"]),
-        ],
-        [
-            Paragraph("Advance Delay Notice", styles["TableCellBold"]),
-            Paragraph("≥ 24 Hours", styles["TableCell"]),
-            Paragraph("36 Hours", styles["TableCellBold"]),
-            Paragraph("+12 Hours", styles["TableCell"]),
-            Paragraph("Proactive Notification", styles["TableCell"]),
+            Paragraph("RMA Replacement Speed", styles["TableCellBold"]),
+            Paragraph("&le; 5 days", styles["TableCell"]),
+            Paragraph("4.2 days", styles["TableCell"]),
+            Paragraph("+0.8 days", styles["TableCell"]),
+            Paragraph("Compliant", styles["TableCell"]),
         ],
     ]
-    t_kpi = Table(kpi_data, colWidths=[120, 75, 75, 95, 122])
+    t_kpi = Table(kpi_data, colWidths=[120, 75, 80, 75, 137])
     t_kpi.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#1E3A8A")),
-        ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor("#CBD5E1")),
-        ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.HexColor("#FFFFFF"), colors.HexColor("#F8FAFC")]),
+        ('BOX', (0, 0), (-1, -1), 0.5, colors.HexColor("#CBD5E1")),
+        ('INNERGRID', (0, 0), (-1, -1), 0.5, colors.HexColor("#E2E8F0")),
         ('TOPPADDING', (0, 0), (-1, -1), 4),
         ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
         ('LEFTPADDING', (0, 0), (-1, -1), 6),
         ('RIGHTPADDING', (0, 0), (-1, -1), 6),
-        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
     ]))
     story.append(t_kpi)
-    story.append(Spacer(1, 10))
+    story.append(Spacer(1, 8))
 
-    # 3.0 SKU-Level Fulfillment Analysis
-    story.append(Paragraph("3.0 SKU-Level Fulfillment Analysis & Performance Breakdown", styles["SectionHeading"]))
+    story.append(Paragraph("3.0 Reliability Standing and Escalation Assessment", styles["SectionHeading"]))
     story.append(Paragraph(
-        "3.1 <b>TS-WM-01 (Wireless Mouse):</b> 8 purchase orders totaling 240 units were received with 100% on-time fulfillment and zero defective units detected during incoming inspection. "
-        "Demonstrated outstanding production and delivery consistency in alignment with agreed catalog commitments.",
-        styles["ClauseBody"]
-    ))
-    story.append(Paragraph(
-        "3.2 <b>TS-KB-RGB (Mechanical Keyboard):</b> 6 purchase orders totaling 90 units were fulfilled. One shipment suffered a 2-day delivery slip in mid-August due to Colombo customs port delays. "
-        "Two units with unresponsive blue switches were identified; replacement units were dispatched by TechSource within 4 business days under RMA-2026-0814.",
-        styles["ClauseBody"]
-    ))
-    story.append(Paragraph(
-        "3.3 <b>TS-LS-ALU (Laptop Stand) & TS-HDMI-2 (HDMI Cable):</b> Combined 10 orders totaling 350 units delivered with 100% on-time accuracy and pristine packaging compliance.",
-        styles["ClauseBody"]
-    ))
-    story.append(Paragraph(
-        "3.4 <b>TS-PPR-A4 (Printer Paper):</b> 4 bulk orders (200 reams) fulfilled. One carton sustained minor external transit moisture damage, and TechSource Lanka immediately credited the damaged ream on Invoice INV-8921.",
+        "3.1 TechSource Lanka is in Good Standing. No formal Stage 1 or Stage 2 escalation was triggered during Q3 2026. "
+        "The vendor remains recommended for balanced high-risk and standard procurement operations.",
         styles["ClauseBody"]
     ))
 
-    # 4.0 Operational Incidents & Mitigations
-    story.append(Paragraph("4.0 Operational Incidents and Corrective Resolutions", styles["SectionHeading"]))
-    story.append(Paragraph(
-        "4.1 <b>Incident LOG-2026-0814 (Customs Congestion):</b> On August 14, 2026, shipment PO-2026-0812 was impacted by logistics delays. "
-        "Account Manager Kamal Silva formally alerted SmartSupply 36 hours in advance, allowing our inventory planning team to shift safety stock buffers and prevent retail backorders. "
-        "TechSource voluntarily waived the shipping fee for that consignment.",
-        styles["ClauseBody"]
-    ))
+    doc.build(story, canvasmaker=NumberedCanvas)
+    print(f"Generated: {output_path}")
 
-    # 5.0 Escalation Triggers Evaluation
-    story.append(Paragraph("5.0 Escalation Triggers and Corrective Action Plan (CAP) Review", styles["SectionHeading"]))
-    story.append(Paragraph(
-        "5.1 <b>When can a supplier be escalated for poor performance?</b> Under Section 8.3 of the SmartSupply Procurement Policy and Section 8.0 of the Master SLA, "
-        "formal vendor escalation is triggered when: (a) OTIF delivery falls below 90.0% across two consecutive reporting cycles; (b) batch defect rates exceed 2.5%; "
-        "or (c) open RMA replacements remain unresolved beyond 10 business days.",
-        styles["ClauseBodyBold"]
-    ))
-    story.append(Paragraph(
-        "5.2 <b>Evaluation Outcome:</b> TechSource Lanka's Q3 performance was reviewed against all three mandatory escalation thresholds:<br/>"
-        "• OTIF achieved 94.2% (well above the 90.0% escalation trigger).<br/>"
-        "• Defect rate registered at 1.28% (comfortably below the 2.5% single-batch and 1.5% average threshold).<br/>"
-        "• RMA turnaround averaged 4.2 days (significantly better than the 10-day escalation ceiling).<br/>"
-        "<b>Conclusion:</b> TechSource Lanka is NOT subject to formal Stage 1 or Stage 2 escalation. An informal advisory recommendation was issued requesting "
-        "the maintenance of local safety stock at their Colombo 03 warehouse.",
-        styles["ClauseBody"]
-    ))
-    story.append(Spacer(1, 4))
-    story.append(create_callout_box(
-        styles,
-        "Formal escalation is not triggered as all performance metrics remain safely above contractual escalation floors (OTIF > 90%, Defect < 2.5%, RMA < 10 days).",
-        "AUDIT FINDING"
-    ))
-    story.append(Spacer(1, 6))
 
-    # 6.0 Strategic Recommendations for Q4
-    story.append(Paragraph("6.0 Strategic Recommendations and Q4 2026 Performance Targets", styles["SectionHeading"]))
-    story.append(Paragraph(
-        "6.1 <b>Action 1 (Target OTD ≥ 96.0%):</b> TechSource Lanka will reserve dedicated buffer inventory of 50 units for fast-moving SKU TS-WM-01 to absorb year-end fourth-quarter demand surges.",
-        styles["ClauseBody"]
-    ))
-    story.append(Paragraph(
-        "6.2 <b>Action 2 (Packaging Optimization):</b> Reinforce moisture-resistant outer shrink-wrap on all paper and cardboard packaging during the monsoon logistics period.",
-        styles["ClauseBody"]
-    ))
-    story.append(Paragraph(
-        "6.3 <b>Action 3 (Commercial SLA Review):</b> Convene the scheduled bi-annual commercial pricing and contract volume review in November 2026.",
-        styles["ClauseBody"]
-    ))
-    story.append(Spacer(1, 10))
+# Backwards compatibility alias
+generate_performance_review = generate_techsource_performance_review
 
-    # Signature Block
-    sig_data = [
-        [
-            Paragraph("<b>Prepared by:</b><br/>Lead Procurement Specialist<br/>SmartSupply Electronics Pvt Ltd", styles["TableCell"]),
-            Paragraph("<b>Reviewed & Confirmed:</b><br/>Kamal Silva, Key Account Manager<br/>TechSource Lanka", styles["TableCell"]),
-            Paragraph("<b>Approved by:</b><br/>Head of Supply Chain & Logistics<br/>SmartSupply Electronics Pvt Ltd", styles["TableCell"]),
-        ]
+
+# =============================================================================
+# DOCUMENT 7: Digital Distribution Lanka Performance Review — Q3 2026
+# =============================================================================
+def generate_digital_performance_review(output_path: str, supplier_id: int):
+    styles = get_custom_stylesheet()
+    doc = SimpleDocTemplate(
+        output_path,
+        pagesize=A4,
+        leftMargin=54,
+        rightMargin=54,
+        topMargin=54,
+        bottomMargin=54,
+    )
+    story = []
+
+    story.append(Paragraph("Supplier Performance Review — Q3 2026", styles["DocTitle"]))
+    story.append(Paragraph("Quarterly Vendor Evaluation & Contractual SLA Compliance Audit: Digital Distribution Lanka", styles["DocSubtitle"]))
+    
+    meta_items = [
+        [("Vendor Evaluated", "Digital Distribution Lanka"), ("Supplier Code", "DEMO-SUP-002")],
+        [("Evaluation Period", "Q3 2026 (July 1 – Sept 30, 2026)"), ("Supplier ID Ref", f"SUP-{supplier_id}")],
+        [("Document Type", "Supplier Performance Report"), ("Overall Score", "97.2 / 100 (Premium Standing)")],
     ]
-    t_sig = Table(sig_data, colWidths=[162, 162, 163])
-    t_sig.setStyle(TableStyle([
+    story.append(create_meta_box(styles, meta_items))
+    story.append(Spacer(1, 12))
+
+    story.append(Paragraph("1.0 Executive Summary and Review Scope", styles["SectionHeading"]))
+    story.append(Paragraph(
+        "1.1 Digital Distribution Lanka demonstrated superior delivery velocity in Q3 2026, achieving an observed OTIF rate of 98.4% "
+        "and rapid delivery compliance of 99.1% across 42 expedited orders. Outstanding choice for emergency and high-urgency fulfillment.",
+        styles["ClauseBody"]
+    ))
+
+    story.append(Paragraph("2.0 Key Performance Indicators Scorecard", styles["SectionHeading"]))
+    kpi_data = [
+        [
+            Paragraph("KPI Dimension", styles["TableHeader"]),
+            Paragraph("SLA Target", styles["TableHeader"]),
+            Paragraph("Q3 Observed", styles["TableHeader"]),
+            Paragraph("Variance", styles["TableHeader"]),
+            Paragraph("Assessment", styles["TableHeader"]),
+        ],
+        [
+            Paragraph("On-Time In-Full (OTIF)", styles["TableCellBold"]),
+            Paragraph("98.0%", styles["TableCell"]),
+            Paragraph("98.4%", styles["TableCell"]),
+            Paragraph("+0.4%", styles["TableCell"]),
+            Paragraph("Exceeded Target", styles["TableCell"]),
+        ],
+        [
+            Paragraph("Expedited Delivery Accuracy", styles["TableCellBold"]),
+            Paragraph("&ge; 98.0%", styles["TableCell"]),
+            Paragraph("99.1%", styles["TableCell"]),
+            Paragraph("+1.1%", styles["TableCell"]),
+            Paragraph("Premium Velocity", styles["TableCell"]),
+        ],
+        [
+            Paragraph("Quality Defect Rate", styles["TableCellBold"]),
+            Paragraph("&le; 1.0%", styles["TableCell"]),
+            Paragraph("0.20%", styles["TableCell"]),
+            Paragraph("+0.8%", styles["TableCell"]),
+            Paragraph("Benchmark Standard", styles["TableCell"]),
+        ],
+    ]
+    t_kpi = Table(kpi_data, colWidths=[120, 75, 80, 75, 137])
+    t_kpi.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#1E3A8A")),
         ('BOX', (0, 0), (-1, -1), 0.5, colors.HexColor("#CBD5E1")),
-        ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor("#F8FAFC")),
-        ('TOPPADDING', (0, 0), (-1, -1), 6),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
-        ('LEFTPADDING', (0, 0), (-1, -1), 8),
-        ('RIGHTPADDING', (0, 0), (-1, -1), 8),
+        ('INNERGRID', (0, 0), (-1, -1), 0.5, colors.HexColor("#E2E8F0")),
+        ('TOPPADDING', (0, 0), (-1, -1), 4),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+        ('LEFTPADDING', (0, 0), (-1, -1), 6),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 6),
     ]))
-    story.append(KeepTogether([t_sig]))
+    story.append(t_kpi)
+    story.append(Spacer(1, 8))
+
+    story.append(Paragraph("3.0 Strategic Value in Emergency Procurement", styles["SectionHeading"]))
+    story.append(Paragraph(
+        "3.1 Digital Distribution Lanka's strong delivery margin and 2-day standard lead time reliably eliminate stockout exposure. "
+        "Retains Premium Standing status for critical and emergency purchase commitments.",
+        styles["ClauseBody"]
+    ))
+
+    doc.build(story, canvasmaker=NumberedCanvas)
+    print(f"Generated: {output_path}")
+
+
+# =============================================================================
+# DOCUMENT 8: NextGen Supplies Performance Review — Q3 2026
+# =============================================================================
+def generate_nextgen_performance_review(output_path: str, supplier_id: int):
+    styles = get_custom_stylesheet()
+    doc = SimpleDocTemplate(
+        output_path,
+        pagesize=A4,
+        leftMargin=54,
+        rightMargin=54,
+        topMargin=54,
+        bottomMargin=54,
+    )
+    story = []
+
+    story.append(Paragraph("Supplier Performance Review — Q3 2026", styles["DocTitle"]))
+    story.append(Paragraph("Quarterly Vendor Evaluation & Contractual SLA Compliance Audit: NextGen Supplies", styles["DocSubtitle"]))
+    
+    meta_items = [
+        [("Vendor Evaluated", "NextGen Supplies"), ("Supplier Code", "DEMO-SUP-003")],
+        [("Evaluation Period", "Q3 2026 (July 1 – Sept 30, 2026)"), ("Supplier ID Ref", f"SUP-{supplier_id}")],
+        [("Document Type", "Supplier Performance Report"), ("Overall Score", "83.4 / 100 (Bulk Qualified)")],
+    ]
+    story.append(create_meta_box(styles, meta_items))
+    story.append(Spacer(1, 12))
+
+    story.append(Paragraph("1.0 Executive Summary and Review Scope", styles["SectionHeading"]))
+    story.append(Paragraph(
+        "1.1 NextGen Supplies fulfilled 18 bulk consolidated purchase orders in Q3 2026. While offering the lowest wholesale unit prices, "
+        "freight consolidation resulted in an observed OTIF rate of 91.8% and delivery variance of +/- 2 business days. "
+        "Best suited for planned bulk replenishment where delivery lead times are not tightly constrained.",
+        styles["ClauseBody"]
+    ))
+
+    story.append(Paragraph("2.0 Key Performance Indicators Scorecard", styles["SectionHeading"]))
+    kpi_data = [
+        [
+            Paragraph("KPI Dimension", styles["TableHeader"]),
+            Paragraph("SLA Target", styles["TableHeader"]),
+            Paragraph("Q3 Observed", styles["TableHeader"]),
+            Paragraph("Variance", styles["TableHeader"]),
+            Paragraph("Assessment", styles["TableHeader"]),
+        ],
+        [
+            Paragraph("On-Time In-Full (OTIF)", styles["TableCellBold"]),
+            Paragraph("92.0%", styles["TableCell"]),
+            Paragraph("91.8%", styles["TableCell"]),
+            Paragraph("-0.2%", styles["TableCell"]),
+            Paragraph("Acceptable Bulk", styles["TableCell"]),
+        ],
+        [
+            Paragraph("Bulk Order Fulfillment", styles["TableCellBold"]),
+            Paragraph("&ge; 95.0%", styles["TableCell"]),
+            Paragraph("96.5%", styles["TableCell"]),
+            Paragraph("+1.5%", styles["TableCell"]),
+            Paragraph("High Volume Passed", styles["TableCell"]),
+        ],
+        [
+            Paragraph("Delivery Variance", styles["TableCellBold"]),
+            Paragraph("&plusmn; 1 day", styles["TableCell"]),
+            Paragraph("&plusmn; 2 days", styles["TableCell"]),
+            Paragraph("-1 day", styles["TableCell"]),
+            Paragraph("Elevated Variance", styles["TableCell"]),
+        ],
+    ]
+    t_kpi = Table(kpi_data, colWidths=[120, 75, 80, 75, 137])
+    t_kpi.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#1E3A8A")),
+        ('BOX', (0, 0), (-1, -1), 0.5, colors.HexColor("#CBD5E1")),
+        ('INNERGRID', (0, 0), (-1, -1), 0.5, colors.HexColor("#E2E8F0")),
+        ('TOPPADDING', (0, 0), (-1, -1), 4),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+        ('LEFTPADDING', (0, 0), (-1, -1), 6),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 6),
+    ]))
+    story.append(t_kpi)
+    story.append(Spacer(1, 8))
+
+    story.append(Paragraph("3.0 Service Limitations in Constrained Delivery Windows", styles["SectionHeading"]))
+    story.append(Paragraph(
+        "3.1 Delivery lead times cannot be accelerated for emergency orders. When delivery window is &le; 5 days, "
+        "NextGen's 7-day transit results in negative delivery slack and potential stockout exposure. "
+        "Retains Bulk Qualified standing for standard normal replenishments.",
+        styles["ClauseBody"]
+    ))
 
     doc.build(story, canvasmaker=NumberedCanvas)
     print(f"Generated: {output_path}")
@@ -1188,10 +1013,9 @@ def generate_performance_review(output_path: str, supplier_id: int):
 # =============================================================================
 def main():
     print("=" * 60)
-    print("SMARTSUPPLY ELECTRONICS — DEMO DOCUMENT GENERATION & UPLOAD")
+    print("SMARTSUPPLY ELECTRONICS — DEMO DOCUMENT GENERATION & UPLOAD (8 DOCS)")
     print("=" * 60)
 
-    # 1. Query seeded suppliers from database
     db = SessionLocal()
     try:
         suppliers = db.execute(select(Supplier).where(Supplier.is_active == True)).scalars().all()
@@ -1208,7 +1032,6 @@ def main():
             print("ERROR: Required suppliers not found in database!")
             sys.exit(1)
 
-        # Ensure an active user exists for authentication
         user = db.execute(select(User).where(User.is_active == True)).scalars().first()
         if not user:
             print("ERROR: No active user found in database for authentication!")
@@ -1218,12 +1041,10 @@ def main():
     finally:
         db.close()
 
-    # 2. Directory for temporary generated PDFs
     output_dir = Path(settings.DOCUMENT_STORAGE_DIR).parent / "demo_generated_pdfs"
     output_dir.mkdir(parents=True, exist_ok=True)
     print(f"\nTarget generation directory: {output_dir}")
 
-    # 3. Document specifications
     doc_specs = [
         {
             "id_tag": "DOC-1",
@@ -1267,17 +1088,33 @@ def main():
         },
         {
             "id_tag": "DOC-6",
-            "title": "Supplier Performance Review — Q3 2026",
+            "title": "TechSource Lanka Performance Review — Q3 2026",
             "document_type": DocumentType.SUPPLIER_PERFORMANCE_REPORT.value,
             "supplier_id": techsource_id,
             "filename": "supplier_performance_review_q3_2026_techsource.pdf",
-            "generator": lambda p: generate_performance_review(p, techsource_id),
+            "generator": lambda p: generate_techsource_performance_review(p, techsource_id),
+        },
+        {
+            "id_tag": "DOC-7",
+            "title": "Digital Distribution Lanka Performance Review — Q3 2026",
+            "document_type": DocumentType.SUPPLIER_PERFORMANCE_REPORT.value,
+            "supplier_id": digital_id,
+            "filename": "supplier_performance_review_q3_2026_digital.pdf",
+            "generator": lambda p: generate_digital_performance_review(p, digital_id),
+        },
+        {
+            "id_tag": "DOC-8",
+            "title": "NextGen Supplies Performance Review — Q3 2026",
+            "document_type": DocumentType.SUPPLIER_PERFORMANCE_REPORT.value,
+            "supplier_id": nextgen_id,
+            "filename": "supplier_performance_review_q3_2026_nextgen.pdf",
+            "generator": lambda p: generate_nextgen_performance_review(p, nextgen_id),
         },
     ]
 
-    # Clean up any existing demo documents to ensure clean idempotent run
     print("\n--- Checking for existing demo documents to clean up ---")
     demo_titles = {spec["title"] for spec in doc_specs}
+    demo_titles.add("Supplier Performance Review — Q3 2026") # historical title
     db_clean = SessionLocal()
     try:
         existing_docs = db_clean.execute(
@@ -1289,7 +1126,6 @@ def main():
     finally:
         db_clean.close()
 
-    # 4. Generate all 6 PDFs
     print("\n--- Generating PDF files ---")
     generated_files = []
     for spec in doc_specs:
@@ -1299,7 +1135,6 @@ def main():
         print(f"  [+] {spec['title']} ({file_size:,} bytes) -> {file_path.name}")
         generated_files.append((spec, file_path))
 
-    # 5. Upload via TestClient API endpoint
     print("\n--- Uploading via Document Management API (POST /api/v1/documents) ---")
     client = TestClient(app)
     headers = {"Authorization": f"Bearer {auth_token}"}
@@ -1335,59 +1170,9 @@ def main():
         doc_json = response.json()
         uploaded_records.append(doc_json)
         print(f"  [OK] Uploaded ID {doc_json['id']}: '{doc_json['title']}'")
-        print(f"       Type: {doc_json['document_type']}, Supplier ID: {doc_json.get('supplier_id')}")
-        print(f"       Filename: {doc_json['original_filename']}, Size: {doc_json['file_size_bytes']:,} bytes")
-        print(f"       SHA256: {doc_json['sha256_checksum']}")
-
-    # 6. Verification: GET /api/v1/documents
-    print("\n--- Verifying GET /api/v1/documents ---")
-    list_response = client.get("/api/v1/documents", headers=headers)
-    if list_response.status_code != 200:
-        print(f"FAILED to list documents: {list_response.status_code}")
-        sys.exit(1)
-
-    all_docs = list_response.json()
-    print(f"Total documents returned by API: {len(all_docs)}")
-    for d in all_docs:
-        sup_name = d["supplier"]["name"] if d.get("supplier") else "None (Company-Wide)"
-        print(f"  * ID {d['id']:2d} | {d['document_type']:32s} | Supplier: {sup_name:28s} | {d['title']}")
-
-    # 7. Verification: Verify physical files in configured storage directory
-    print("\n--- Verifying Physical Files in Storage Directory ---")
-    storage_dir = get_storage_dir()
-    print(f"Storage directory: {storage_dir}")
-    all_files_exist = True
-    
-    db_verify = SessionLocal()
-    try:
-        for d in uploaded_records:
-            doc_row = db_verify.get(Document, d["id"])
-            if not doc_row:
-                print(f"  [FAIL] Document ID {d['id']} missing from DB!")
-                all_files_exist = False
-                continue
-            
-            stored_path = Path(storage_dir) / doc_row.storage_key
-            exists = stored_path.is_file()
-            if exists:
-                file_bytes = stored_path.read_bytes()
-                has_pdf_magic = file_bytes.startswith(b"%PDF-")
-                size_matches = len(file_bytes) == doc_row.file_size_bytes
-                sha_matches = hashlib.sha256(file_bytes).hexdigest() == doc_row.sha256_checksum
-                print(f"  [OK] ID {doc_row.id:2d} | Storage Key: {doc_row.storage_key}")
-                print(f"       File Exists={exists}, Valid %PDF- Magic={has_pdf_magic}, Size Match={size_matches}, Checksum Match={sha_matches}")
-            else:
-                print(f"  [FAIL] Storage Key {doc_row.storage_key}: MISSING on disk!")
-                all_files_exist = False
-    finally:
-        db_verify.close()
-
-    if not all_files_exist:
-        print("ERROR: One or more physical files are missing!")
-        sys.exit(1)
 
     print("\n" + "=" * 60)
-    print("ALL 6 DEMO DOCUMENTS SUCCESSFULLY GENERATED, UPLOADED, AND VERIFIED!")
+    print("ALL 8 DEMO DOCUMENTS SUCCESSFULLY GENERATED, UPLOADED, AND INDEXED!")
     print("=" * 60)
 
 

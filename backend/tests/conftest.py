@@ -49,3 +49,27 @@ def _bypass_catalog_auth_for_legacy_tests(request):
     app.dependency_overrides[require_catalog_access] = _staff_user
     yield
     app.dependency_overrides.pop(require_catalog_access, None)
+
+
+@pytest.fixture
+def isolated_chroma_dir(tmp_path):
+    """Provides a dedicated temporary directory for Chroma storage."""
+    chroma_path = tmp_path / "chroma"
+    chroma_path.mkdir(parents=True, exist_ok=True)
+    return chroma_path
+
+
+@pytest.fixture(autouse=True)
+def isolate_chroma_storage(tmp_path, monkeypatch):
+    """
+    Global isolation fixture ensuring all test suites run against an isolated
+    temporary directory and NEVER touch or mutate the development Chroma store
+    at backend/storage/chroma.
+    """
+    from app.services.chroma_service import reset_chroma_client
+
+    test_chroma = str(tmp_path / "isolated_test_chroma")
+    monkeypatch.setattr(settings, "CHROMA_PERSIST_DIR", test_chroma)
+    reset_chroma_client()
+    yield test_chroma
+    reset_chroma_client()

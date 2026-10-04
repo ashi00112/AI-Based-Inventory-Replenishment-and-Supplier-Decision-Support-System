@@ -239,14 +239,23 @@ class SupplierProcurementAgent:
         # =========================================================================
         # 4. GATHER GROUNDED PROCUREMENT & SLA EVIDENCE FROM CHROMADB
         # =========================================================================
+        try:
+            from app.services.chroma_service import _get_collection, reconcile_index_state
+            coll = _get_collection()
+            if coll.count() == 0:
+                logger.info("ChromaDB vector collection is empty. Reconciling index state...")
+                reconcile_index_state(db=db, repair=True)
+        except Exception as exc:
+            logger.warning("Automated Chroma reconciliation check skipped: %s", exc)
+
         evidence_by_supplier: Dict[int, List[Dict[str, Any]]] = {}
         all_retrieved_evidence: List[Dict[str, Any]] = []
         valid_doc_ids: set = set()
 
         for cand in raw_candidates:
             s_id = cand["supplier_id"]
-            query_str = f"SLA lead time late delivery emergency warranty terms {resolved_product['name']}"
-            chunks = search_supplier_documents(query=query_str, supplier_id=s_id, top_k=3, db=db)
+            query_str = f"delivery reliability OTIF emergency expedited priority dispatch order performance {resolved_product['name']}"
+            chunks = search_supplier_documents(query=query_str, supplier_id=s_id, top_k=4, db=db)
             cleaned_chunks = []
             for c in chunks:
                 doc_id = c.get("document_id")

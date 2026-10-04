@@ -43,10 +43,13 @@ from app.services.document_service import (
 )
 from scripts.generate_and_upload_demo_docs import (
     generate_digital_distribution_sla,
+    generate_digital_performance_review,
     generate_inventory_replenishment_policy,
+    generate_nextgen_performance_review,
     generate_nextgen_sla,
     generate_performance_review,
     generate_procurement_policy,
+    generate_techsource_performance_review,
     generate_techsource_sla,
 )
 
@@ -108,12 +111,34 @@ def get_known_demo_specs(supplier_map: Dict[str, int]) -> List[Dict[str, Any]]:
         },
         {
             "id_tag": "DOC-6",
-            "title": "Supplier Performance Review — Q3 2026",
-            "alternate_titles": ["Supplier Performance Review – Q3 2026", "Supplier Performance Review - Q3 2026"],
+            "title": "TechSource Lanka Performance Review — Q3 2026",
+            "alternate_titles": [
+                "Supplier Performance Review — Q3 2026",
+                "Supplier Performance Review – Q3 2026",
+                "Supplier Performance Review - Q3 2026",
+            ],
             "document_type": DocumentType.SUPPLIER_PERFORMANCE_REPORT.value,
             "supplier_id": techsource_id,
             "filename": "supplier_performance_review_q3_2026_techsource.pdf",
-            "generator": lambda p: generate_performance_review(p, techsource_id),
+            "generator": lambda p: generate_techsource_performance_review(p, techsource_id),
+        },
+        {
+            "id_tag": "DOC-7",
+            "title": "Digital Distribution Lanka Performance Review — Q3 2026",
+            "alternate_titles": [],
+            "document_type": DocumentType.SUPPLIER_PERFORMANCE_REPORT.value,
+            "supplier_id": digital_id,
+            "filename": "supplier_performance_review_q3_2026_digital.pdf",
+            "generator": lambda p: generate_digital_performance_review(p, digital_id),
+        },
+        {
+            "id_tag": "DOC-8",
+            "title": "NextGen Supplies Performance Review — Q3 2026",
+            "alternate_titles": [],
+            "document_type": DocumentType.SUPPLIER_PERFORMANCE_REPORT.value,
+            "supplier_id": nextgen_id,
+            "filename": "supplier_performance_review_q3_2026_nextgen.pdf",
+            "generator": lambda p: generate_nextgen_performance_review(p, nextgen_id),
         },
     ]
 

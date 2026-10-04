@@ -43,18 +43,29 @@ def sanitize_error_message(err: Any) -> str:
     return first_line[:255]
 
 
+def reset_chroma_client() -> None:
+    """Resets the singleton Chromadb client, forcing the next call to re-read settings."""
+    global _client_instance
+    _client_instance = None
+
+
 def _get_client():
     """Create a singleton Chromadb client pointing to persistent storage.
 
     The client is configured to store data in ``settings.CHROMA_PERSIST_DIR``.
+    Automatically detects path changes (e.g. during isolated testing) and re-instantiates.
     """
     global _client_instance
-    if _client_instance is None:
-        persist_dir = getattr(settings, "CHROMA_PERSIST_DIR", None)
-        if not persist_dir:
-            raise RuntimeError("CHROMA_PERSIST_DIR is not configured in settings.")
-        os.makedirs(persist_dir, exist_ok=True)
-        _client_instance = chromadb.PersistentClient(path=persist_dir)
+    persist_dir = getattr(settings, "CHROMA_PERSIST_DIR", None)
+    if not persist_dir:
+        raise RuntimeError("CHROMA_PERSIST_DIR is not configured in settings.")
+
+    norm_persist_dir = os.path.abspath(persist_dir)
+    current_path = getattr(_client_instance, "_persist_dir", None) if _client_instance is not None else None
+    if _client_instance is None or current_path != norm_persist_dir:
+        os.makedirs(norm_persist_dir, exist_ok=True)
+        _client_instance = chromadb.PersistentClient(path=norm_persist_dir)
+        _client_instance._persist_dir = norm_persist_dir
     return _client_instance
 
 
