@@ -14,6 +14,7 @@ from app.routers import (
     supplier_knowledge,
     suppliers,
     decision,
+    users,
 )
 
 api_router = APIRouter()
@@ -89,3 +90,9 @@ api_router.include_router(
     decision.router,
     tags=["Decision Agent"],
 )
+
+# Admin User Management & RBAC routes
+api_router.include_router(
+    users.router,
+    tags=["User Management"],
+)

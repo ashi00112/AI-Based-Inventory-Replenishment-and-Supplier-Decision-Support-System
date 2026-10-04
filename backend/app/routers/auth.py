@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
+from app.core.config import settings
 from app.core.security import create_access_token
 from app.database.session import get_db
 from app.dependencies.auth import get_current_user
@@ -36,9 +37,15 @@ def register(
 ) -> UserResponse:
     """
     Public registration endpoint.
-    Accepts name, email, and password.
-    Returns the created user's public profile or 409 Conflict if email is already taken.
+    Disabled for internal enterprise deployment.
+    Returns 403 Forbidden unless ALLOW_PUBLIC_REGISTRATION is explicitly enabled.
     """
+    if not getattr(settings, "ALLOW_PUBLIC_REGISTRATION", False):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Public registration is disabled. Contact system administrator for account creation.",
+        )
+
     try:
         new_user = create_user(db=db, user_data=user_data)
         return new_user
