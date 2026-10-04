@@ -234,15 +234,12 @@ export default function Login() {
               </div>
             </form>
 
-            {/* Footer Navigation */}
+            {/* Internal System Footer Notice */}
             <div className="mt-6 pt-4 border-t border-white/[0.06] text-center text-xs text-neutral-500">
-              Don&apos;t have an account?{' '}
-              <Link
-                to="/register"
-                className="text-violet-400 hover:text-violet-300 font-medium transition"
-              >
-                Create one
-              </Link>
+              <span className="text-neutral-400 font-medium">Internal Enterprise System</span>
+              <p className="text-[11px] text-neutral-600 mt-1">
+                Staff accounts are provisioned exclusively by system administrators.
+              </p>
             </div>
           </div>
         </div>
