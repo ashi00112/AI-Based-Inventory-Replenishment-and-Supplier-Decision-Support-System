@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import {
   Package,
   Boxes,
@@ -17,6 +17,8 @@ import {
   Sliders,
   RotateCcw,
   Users,
+  ShieldCheck,
+  Cpu,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { getProducts } from '../services/productApi';
@@ -98,87 +100,90 @@ export default function Dashboard() {
     switch (type) {
       case 'sale':
         return (
-          <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-teal-500/10 text-teal-400 font-mono">
+          <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-cyan-500/15 text-cyan-300 font-mono border border-cyan-500/20">
             <TrendingDown className="w-2.5 h-2.5" /> SALE
           </span>
         );
       case 'restock':
         return (
-          <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-violet-500/10 text-violet-400 font-mono">
+          <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-[#03D26F]/15 text-[#03D26F] font-mono border border-[#03D26F]/25">
             <TrendingUp className="w-2.5 h-2.5" /> RESTOCK
           </span>
         );
       case 'return':
         return (
-          <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 font-mono">
+          <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-sky-500/15 text-sky-300 font-mono border border-sky-500/20">
             <RotateCcw className="w-2.5 h-2.5" /> RETURN
           </span>
         );
       case 'adjustment':
         return (
-          <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 font-mono">
+          <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-[#CEF431]/15 text-[#CEF431] font-mono border border-[#CEF431]/25">
             <Sliders className="w-2.5 h-2.5" /> ADJUST
           </span>
         );
       default:
-        return <span className="text-[10px] font-mono text-neutral-500">{type}</span>;
+        return <span className="text-[10px] font-mono text-[#EAF4F4]/50">{type}</span>;
     }
   };
 
   return (
-    <div className="min-h-screen bg-neutral-950 text-neutral-100 flex flex-col">
+    <div className="min-h-screen bg-[#01272e] text-[#EAF4F4] flex flex-col font-sans selection:bg-[#03D26F]/30 selection:text-white">
       <Navbar />
 
       {/* Main Operational Dashboard Content */}
-      <main className="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 py-8 space-y-8">
-        {/* Welcome Banner */}
-        <section className="relative overflow-hidden rounded-2xl bg-neutral-900/50 border border-white/[0.06] p-6 sm:p-8">
-          <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
-            <div className="max-w-xl space-y-2">
-              <div className="inline-flex items-center gap-2 text-xs font-medium px-2.5 py-1 rounded-full bg-violet-500/10 text-violet-400">
-                <Sparkles className="w-3 h-3" />
-                Operational Dashboard
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-8 space-y-8">
+        {/* Welcome Hero Banner with Dashboard Network Asset */}
+        <section className="relative overflow-hidden rounded-3xl bg-[#01353e] border border-white/[0.1] p-6 sm:p-8 lg:p-10 shadow-xl">
+          {/* Subtle Background Layer */}
+          <div
+            className="absolute inset-0 bg-cover bg-center opacity-30 mix-blend-luminosity scale-105 pointer-events-none"
+            style={{ backgroundImage: `url('/assets/dashboard-hero.jpg')` }}
+          />
+          <div className="absolute inset-0 bg-gradient-to-r from-[#01272e] via-[#01353e]/90 to-[#014651]/80 pointer-events-none" />
+
+          <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+            <div className="max-w-2xl space-y-3">
+              <div className="inline-flex items-center gap-2 text-xs font-semibold px-3 py-1 rounded-full bg-[#03D26F]/15 border border-[#03D26F]/30 text-[#03D26F]">
+                <Cpu className="w-3.5 h-3.5" />
+                <span>Autonomous Multi-Agent Workspace</span>
               </div>
-              <h2 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">
-                Welcome back, {user?.name || 'Manager'}
-              </h2>
-              <p className="text-sm text-neutral-400 leading-relaxed">
-                Monitor real-time warehouse stock, track low inventory alerts against reorder thresholds, and execute verified stock movements.
+              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black text-white tracking-tight">
+                Welcome back, {user?.name || 'Supply Manager'}
+              </h1>
+              <p className="text-xs sm:text-sm text-[#EAF4F4]/80 leading-relaxed">
+                Live monitoring of multi-warehouse physical stock, safety reorder thresholds, and autonomous procurement reasoning. All agent decisions are human-supervised with strict enterprise RBAC.
               </p>
             </div>
 
             {/* Quick Actions */}
-            <div className="flex flex-wrap sm:flex-nowrap items-center gap-3 shrink-0">
+            <div className="flex flex-wrap items-center gap-3 shrink-0">
               <button
                 onClick={() => loadDashboardData(true)}
                 disabled={isRefreshing}
-                className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white/[0.04] hover:bg-white/[0.07] border border-white/[0.06] text-neutral-300 text-xs font-medium transition disabled:opacity-50"
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#01272e]/80 hover:bg-[#01272e] border border-white/[0.1] text-[#EAF4F4] text-xs font-medium transition disabled:opacity-50 cursor-pointer"
               >
-                <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin text-violet-400' : ''}`} />
-                <span>Refresh</span>
+                <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin text-[#03D26F]' : 'text-[#EAF4F4]/60'}`} />
+                <span>Refresh Live Data</span>
               </button>
 
               <Link
                 to="/transactions"
-                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-violet-600 hover:bg-violet-500 text-white font-semibold text-xs transition shadow-lg shadow-violet-600/20 cursor-pointer"
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#03D26F] hover:bg-[#02be63] text-[#161514] font-bold text-xs transition shadow-lg shadow-[#03D26F]/20 cursor-pointer"
               >
-                <Plus className="w-4 h-4" />
+                <Plus className="w-4 h-4 text-[#161514]" />
                 <span>Record Movement</span>
               </Link>
 
               <Link
-                to="/products"
-                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/[0.04] hover:bg-white/[0.07] border border-white/[0.06] text-neutral-200 text-xs font-medium transition cursor-pointer"
+                to="/decisions"
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#CEF431] hover:bg-[#bde026] text-[#161514] font-bold text-xs transition shadow-lg shadow-[#CEF431]/20 cursor-pointer"
               >
-                <Package className="w-4 h-4 text-violet-400" />
-                <span>Add Product</span>
+                <Sparkles className="w-4 h-4 text-[#161514]" />
+                <span>Run Decision Agent</span>
               </Link>
             </div>
           </div>
-
-          {/* Subtle ambient glow */}
-          <div className="absolute -right-20 -top-20 w-72 h-72 bg-violet-500/[0.04] rounded-full blur-3xl pointer-events-none" />
-          <div className="absolute -left-20 -bottom-20 w-72 h-72 bg-teal-500/[0.03] rounded-full blur-3xl pointer-events-none" />
         </section>
 
         {/* Live Operational KPI Cards */}
@@ -186,20 +191,20 @@ export default function Dashboard() {
           {/* 1. Catalog Products */}
           <Link
             to="/products"
-            className="group bg-neutral-900/40 hover:bg-neutral-900/60 border border-white/[0.06] hover:border-violet-500/20 rounded-2xl p-5 transition-all flex flex-col justify-between"
+            className="group bg-[#01353e]/60 hover:bg-[#01353e]/90 border border-white/[0.08] hover:border-[#03D26F]/40 rounded-2xl p-5 transition-all flex flex-col justify-between shadow-sm"
           >
-            <div className="flex items-center justify-between text-neutral-400">
-              <span className="text-xs font-medium">Catalog Products</span>
-              <div className="p-2 rounded-xl bg-violet-500/10 text-violet-400 group-hover:scale-105 transition">
+            <div className="flex items-center justify-between text-[#EAF4F4]/70">
+              <span className="text-xs font-semibold uppercase tracking-wider">Catalog Products</span>
+              <div className="p-2 rounded-xl bg-[#03D26F]/10 text-[#03D26F] group-hover:scale-105 transition">
                 <Package className="w-4 h-4" />
               </div>
             </div>
             <div className="mt-4 flex items-baseline justify-between">
-              <span className="text-2xl sm:text-3xl font-bold font-mono text-white">
+              <span className="text-2xl sm:text-3xl font-black font-mono text-white">
                 {isLoading ? '—' : metrics.totalProducts}
               </span>
-              <span className="text-[11px] text-violet-400 font-medium inline-flex items-center gap-0.5">
-                Manage <ArrowUpRight className="w-3 h-3" />
+              <span className="text-xs text-[#03D26F] font-semibold inline-flex items-center gap-0.5 group-hover:translate-x-0.5 transition-transform">
+                Manage <ArrowUpRight className="w-3.5 h-3.5" />
               </span>
             </div>
           </Link>
@@ -207,38 +212,38 @@ export default function Dashboard() {
           {/* 2. On-Hand Physical Stock */}
           <Link
             to="/inventory"
-            className="group bg-neutral-900/40 hover:bg-neutral-900/60 border border-white/[0.06] hover:border-teal-500/20 rounded-2xl p-5 transition-all flex flex-col justify-between"
+            className="group bg-[#01353e]/60 hover:bg-[#01353e]/90 border border-white/[0.08] hover:border-[#03D26F]/40 rounded-2xl p-5 transition-all flex flex-col justify-between shadow-sm"
           >
-            <div className="flex items-center justify-between text-neutral-400">
-              <span className="text-xs font-medium">Total On Hand</span>
-              <div className="p-2 rounded-xl bg-teal-500/10 text-teal-400 group-hover:scale-105 transition">
+            <div className="flex items-center justify-between text-[#EAF4F4]/70">
+              <span className="text-xs font-semibold uppercase tracking-wider">Total On Hand</span>
+              <div className="p-2 rounded-xl bg-[#03D26F]/15 text-[#03D26F] group-hover:scale-105 transition">
                 <Warehouse className="w-4 h-4" />
               </div>
             </div>
             <div className="mt-4 flex items-baseline justify-between">
-              <span className="text-2xl sm:text-3xl font-bold font-mono text-teal-400">
+              <span className="text-2xl sm:text-3xl font-black font-mono text-[#03D26F]">
                 {isLoading ? '—' : metrics.totalOnHand.toLocaleString()}
               </span>
-              <span className="text-[11px] text-neutral-500 font-medium">units stored</span>
+              <span className="text-[11px] text-[#EAF4F4]/60 font-medium">units stored</span>
             </div>
           </Link>
 
           {/* 3. Reserved Orders */}
           <Link
             to="/inventory"
-            className="group bg-neutral-900/40 hover:bg-neutral-900/60 border border-white/[0.06] hover:border-blue-500/20 rounded-2xl p-5 transition-all flex flex-col justify-between"
+            className="group bg-[#01353e]/60 hover:bg-[#01353e]/90 border border-white/[0.08] hover:border-cyan-400/40 rounded-2xl p-5 transition-all flex flex-col justify-between shadow-sm"
           >
-            <div className="flex items-center justify-between text-neutral-400">
-              <span className="text-xs font-medium">Committed / Reserved</span>
-              <div className="p-2 rounded-xl bg-blue-500/10 text-blue-400 group-hover:scale-105 transition">
+            <div className="flex items-center justify-between text-[#EAF4F4]/70">
+              <span className="text-xs font-semibold uppercase tracking-wider">Committed / Reserved</span>
+              <div className="p-2 rounded-xl bg-cyan-500/15 text-cyan-300 group-hover:scale-105 transition">
                 <Boxes className="w-4 h-4" />
               </div>
             </div>
             <div className="mt-4 flex items-baseline justify-between">
-              <span className="text-2xl sm:text-3xl font-bold font-mono text-blue-300">
+              <span className="text-2xl sm:text-3xl font-black font-mono text-cyan-200">
                 {isLoading ? '—' : metrics.totalReserved.toLocaleString()}
               </span>
-              <span className="text-[11px] text-neutral-500 font-medium">
+              <span className="text-[11px] text-[#EAF4F4]/60 font-medium">
                 Avail: {metrics.totalAvailable.toLocaleString()}
               </span>
             </div>
@@ -247,20 +252,20 @@ export default function Dashboard() {
           {/* 4. Low Stock Alerts */}
           <Link
             to="/inventory"
-            className="group bg-neutral-900/40 hover:bg-neutral-900/60 border border-white/[0.06] hover:border-amber-500/20 rounded-2xl p-5 transition-all flex flex-col justify-between"
+            className="group bg-[#01353e]/60 hover:bg-[#01353e]/90 border border-white/[0.08] hover:border-[#CEF431]/40 rounded-2xl p-5 transition-all flex flex-col justify-between shadow-sm"
           >
-            <div className="flex items-center justify-between text-neutral-400">
-              <span className="text-xs font-medium">Reorder Attention</span>
-              <div className="p-2 rounded-xl bg-amber-500/10 text-amber-400 group-hover:scale-105 transition">
+            <div className="flex items-center justify-between text-[#EAF4F4]/70">
+              <span className="text-xs font-semibold uppercase tracking-wider">Reorder Attention</span>
+              <div className="p-2 rounded-xl bg-[#CEF431]/15 text-[#CEF431] group-hover:scale-105 transition">
                 <AlertTriangle className="w-4 h-4" />
               </div>
             </div>
             <div className="mt-4 flex items-baseline justify-between">
-              <span className="text-2xl sm:text-3xl font-bold font-mono text-amber-400">
+              <span className="text-2xl sm:text-3xl font-black font-mono text-[#CEF431]">
                 {isLoading ? '—' : metrics.lowStockCount}
               </span>
-              <span className="text-[11px] text-amber-400/70 font-medium">
-                {metrics.lowStockCount === 0 ? 'Stock healthy' : 'Below threshold'}
+              <span className="text-[11px] font-semibold text-[#CEF431]/80">
+                {metrics.lowStockCount === 0 ? 'Stock healthy' : 'Below safety threshold'}
               </span>
             </div>
           </Link>
@@ -269,39 +274,39 @@ export default function Dashboard() {
         {/* Core Operational Panels */}
         <section className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Left Column: Recent Stock Movement Ledger */}
-          <div className="lg:col-span-2 bg-neutral-900/40 border border-white/[0.06] rounded-2xl p-5 sm:p-6 flex flex-col justify-between space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-white/[0.06]">
+          <div className="lg:col-span-2 bg-[#01353e]/50 border border-white/[0.08] rounded-2xl p-5 sm:p-6 flex flex-col justify-between space-y-4 backdrop-blur-md">
+            <div className="flex items-center justify-between pb-3 border-b border-white/[0.08]">
               <div>
-                <h3 className="text-sm font-semibold text-white flex items-center gap-2">
-                  <ArrowRightLeft className="w-4 h-4 text-violet-400" />
+                <h2 className="text-sm font-bold text-white flex items-center gap-2">
+                  <ArrowRightLeft className="w-4 h-4 text-[#03D26F]" />
                   Recent Stock Movements
-                </h3>
-                <p className="text-[11px] text-neutral-500 mt-0.5">
-                  Latest immutable inventory transactions
+                </h2>
+                <p className="text-[11px] text-[#EAF4F4]/60 mt-0.5">
+                  Latest verified and immutable warehouse transactions
                 </p>
               </div>
               <Link
                 to="/transactions"
-                className="text-xs font-medium text-violet-400 hover:text-violet-300 inline-flex items-center gap-1 transition"
+                className="text-xs font-semibold text-[#03D26F] hover:text-[#02be63] inline-flex items-center gap-1 transition"
               >
                 Full Ledger <ArrowUpRight className="w-3.5 h-3.5" />
               </Link>
             </div>
 
             {/* Transaction List */}
-            <div className="divide-y divide-white/[0.04]">
+            <div className="divide-y divide-white/[0.06]">
               {isLoading ? (
-                <div className="py-12 text-center text-neutral-500 flex flex-col items-center gap-2">
-                  <Clock className="w-5 h-5 animate-spin text-violet-400" />
+                <div className="py-12 text-center text-[#EAF4F4]/50 flex flex-col items-center gap-2">
+                  <Clock className="w-5 h-5 animate-spin text-[#03D26F]" />
                   <span className="text-xs">Loading movements...</span>
                 </div>
               ) : recentTransactions.length === 0 ? (
-                <div className="py-12 text-center text-neutral-500 flex flex-col items-center gap-2">
-                  <ArrowRightLeft className="w-7 h-7 text-neutral-700" />
+                <div className="py-12 text-center text-[#EAF4F4]/50 flex flex-col items-center gap-2">
+                  <ArrowRightLeft className="w-7 h-7 text-[#EAF4F4]/30" />
                   <span className="text-xs">No stock transactions logged yet.</span>
                   <Link
                     to="/transactions"
-                    className="text-xs text-violet-400 hover:underline mt-1 font-medium"
+                    className="text-xs text-[#03D26F] hover:underline mt-1 font-semibold"
                   >
                     Record the first transaction →
                   </Link>
@@ -312,10 +317,10 @@ export default function Dashboard() {
                     <div className="flex items-center gap-3 min-w-0">
                       {renderTxBadge(tx.transaction_type)}
                       <div className="min-w-0">
-                        <p className="font-medium text-neutral-200 truncate">
+                        <p className="font-semibold text-white truncate">
                           {tx.product?.name || `Product #${tx.product_id}`}
                         </p>
-                        <p className="text-[10px] text-neutral-500 font-mono">
+                        <p className="text-[10px] text-[#EAF4F4]/50 font-mono">
                           SKU: {tx.product?.sku} • {new Date(tx.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                         </p>
                       </div>
@@ -331,7 +336,7 @@ export default function Dashboard() {
                           ? `+${tx.quantity}`
                           : tx.quantity}
                       </span>
-                      <span className="text-[10px] font-mono text-neutral-500">
+                      <span className="text-[10px] font-mono text-[#EAF4F4]/50">
                         {tx.previous_on_hand} → {tx.new_on_hand}
                       </span>
                     </div>
@@ -342,20 +347,20 @@ export default function Dashboard() {
           </div>
 
           {/* Right Column: Low Stock Threshold Monitor */}
-          <div className="bg-neutral-900/40 border border-white/[0.06] rounded-2xl p-5 sm:p-6 flex flex-col justify-between space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-white/[0.06]">
+          <div className="bg-[#01353e]/50 border border-white/[0.08] rounded-2xl p-5 sm:p-6 flex flex-col justify-between space-y-4 backdrop-blur-md">
+            <div className="flex items-center justify-between pb-3 border-b border-white/[0.08]">
               <div>
-                <h3 className="text-sm font-semibold text-white flex items-center gap-2">
-                  <AlertTriangle className="w-4 h-4 text-amber-400" />
+                <h2 className="text-sm font-bold text-white flex items-center gap-2">
+                  <AlertTriangle className="w-4 h-4 text-[#CEF431]" />
                   Low Stock Monitor
-                </h3>
-                <p className="text-[11px] text-neutral-500 mt-0.5">
-                  Items below Reorder Point
+                </h2>
+                <p className="text-[11px] text-[#EAF4F4]/60 mt-0.5">
+                  SKUs below Reorder Point (ROP)
                 </p>
               </div>
               <Link
                 to="/inventory"
-                className="text-xs font-medium text-violet-400 hover:text-violet-300 inline-flex items-center gap-1 transition"
+                className="text-xs font-semibold text-[#CEF431] hover:text-[#bde026] inline-flex items-center gap-1 transition"
               >
                 Inspect <ArrowUpRight className="w-3.5 h-3.5" />
               </Link>
@@ -364,35 +369,35 @@ export default function Dashboard() {
             {/* Low stock alerts list */}
             <div className="space-y-2.5 flex-1">
               {isLoading ? (
-                <div className="py-12 text-center text-neutral-500 text-xs">Checking stock...</div>
+                <div className="py-12 text-center text-[#EAF4F4]/50 text-xs">Checking safety thresholds...</div>
               ) : metrics.lowStockItems.length === 0 ? (
-                <div className="py-10 text-center text-neutral-400 flex flex-col items-center justify-center gap-2">
-                  <div className="w-9 h-9 rounded-full bg-teal-500/10 text-teal-400 flex items-center justify-center">
+                <div className="py-10 text-center text-[#EAF4F4]/80 flex flex-col items-center justify-center gap-2">
+                  <div className="w-9 h-9 rounded-full bg-[#03D26F]/15 text-[#03D26F] flex items-center justify-center">
                     <CheckCircle2 className="w-5 h-5" />
                   </div>
-                  <p className="text-xs font-medium text-neutral-300">All Stock Levels Optimal</p>
-                  <p className="text-[11px] text-neutral-500">Every catalog item meets safety thresholds.</p>
+                  <p className="text-xs font-bold text-white">Stock Levels Optimal</p>
+                  <p className="text-[11px] text-[#EAF4F4]/60">Every catalog item meets or exceeds safety stock.</p>
                 </div>
               ) : (
                 metrics.lowStockItems.map((item) => (
                   <div
                     key={item.id}
-                    className="p-3 bg-neutral-950/60 border border-amber-500/10 rounded-xl flex items-center justify-between gap-3 text-xs"
+                    className="p-3 bg-[#01272e]/80 border border-[#CEF431]/20 rounded-xl flex items-center justify-between gap-3 text-xs"
                   >
                     <div className="min-w-0">
-                      <span className="font-mono text-[10px] text-amber-400 block font-semibold">
+                      <span className="font-mono text-[10px] text-[#CEF431] block font-semibold">
                         {item.product?.sku}
                       </span>
-                      <p className="font-medium text-neutral-200 truncate">
+                      <p className="font-semibold text-white truncate">
                         {item.product?.name}
                       </p>
                     </div>
 
                     <div className="text-right shrink-0">
-                      <span className="text-xs font-mono font-bold text-amber-400 block">
+                      <span className="text-xs font-mono font-bold text-[#CEF431] block">
                         {item.available_stock} Avail
                       </span>
-                      <span className="text-[10px] font-mono text-neutral-500">
+                      <span className="text-[10px] font-mono text-[#EAF4F4]/50">
                         ROP: {item.product?.reorder_point}
                       </span>
                     </div>
@@ -402,51 +407,61 @@ export default function Dashboard() {
             </div>
 
             <Link
-              to="/transactions"
-              className="w-full py-2 px-3 rounded-xl bg-white/[0.04] hover:bg-white/[0.07] border border-white/[0.06] text-center text-xs text-neutral-300 hover:text-white font-medium transition block"
+              to="/decisions"
+              className="w-full py-2.5 px-3 rounded-xl bg-[#03D26F]/15 hover:bg-[#03D26F]/25 border border-[#03D26F]/30 text-center text-xs text-[#03D26F] font-bold transition block"
             >
-              Restock via Transactions →
+              Analyze via Decision Agent →
             </Link>
           </div>
         </section>
 
         {/* Operational Modules Navigation Cards */}
-        <section className="space-y-3">
-          <h3 className="text-xs font-semibold uppercase tracking-wider text-neutral-500">
-            System Modules & Workflows
-          </h3>
+        <section className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xs font-semibold uppercase tracking-wider text-[#EAF4F4]/60">
+              Autonomous Systems & Operational Workflows
+            </h2>
+            <span className="text-[11px] font-mono text-[#03D26F] flex items-center gap-1">
+              <ShieldCheck className="w-3.5 h-3.5" /> All Services Online
+            </span>
+          </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-xs">
-            {/* Decision Agent Card */}
+            {/* Decision Agent Card (Featured) */}
             <Link
               to="/decisions"
-              className="p-5 rounded-2xl bg-neutral-900/30 hover:bg-neutral-900/50 border border-violet-500/20 hover:border-violet-500/40 transition group space-y-2 block"
+              className="p-5 rounded-2xl bg-gradient-to-br from-[#01353e] to-[#014651] hover:from-[#014651] hover:to-[#025866] border border-[#03D26F]/30 hover:border-[#03D26F]/60 transition group space-y-2 block shadow-lg shadow-[#03D26F]/5"
             >
               <div className="flex items-center justify-between">
-                <div className="p-2.5 bg-violet-500/10 rounded-xl text-violet-400 group-hover:scale-105 transition">
+                <div className="p-2.5 bg-[#03D26F]/20 rounded-xl text-[#03D26F] group-hover:scale-105 transition">
                   <Sparkles className="w-4 h-4" />
                 </div>
-                <ArrowUpRight className="w-4 h-4 text-neutral-600 group-hover:text-violet-400 transition" />
+                <ArrowUpRight className="w-4 h-4 text-[#03D26F] group-hover:translate-x-0.5 transition" />
               </div>
-              <h4 className="font-semibold text-white text-sm">Decision Agent</h4>
-              <p className="text-neutral-500 text-xs leading-relaxed">
-                Run multi-agent synthesis & Grok AI reasoning for optimal replenishment and supplier decisions.
+              <div className="flex items-center gap-1.5">
+                <h3 className="font-bold text-white text-sm">Decision Agent</h3>
+                <span className="px-1.5 py-0.2 rounded text-[9px] font-bold uppercase bg-[#CEF431]/20 text-[#CEF431]">
+                  AI Core
+                </span>
+              </div>
+              <p className="text-[#EAF4F4]/70 text-xs leading-relaxed">
+                Run 4-agent synthesis & Grok AI reasoning for optimal replenishment and supplier decisions.
               </p>
             </Link>
 
             {/* Products Card */}
             <Link
               to="/products"
-              className="p-5 rounded-2xl bg-neutral-900/30 hover:bg-neutral-900/50 border border-white/[0.06] hover:border-violet-500/20 transition group space-y-2 block"
+              className="p-5 rounded-2xl bg-[#01353e]/60 hover:bg-[#01353e]/90 border border-white/[0.08] hover:border-[#03D26F]/30 transition group space-y-2 block"
             >
               <div className="flex items-center justify-between">
-                <div className="p-2.5 bg-violet-500/10 rounded-xl text-violet-400 group-hover:scale-105 transition">
+                <div className="p-2.5 bg-[#03D26F]/10 rounded-xl text-[#03D26F] group-hover:scale-105 transition">
                   <Package className="w-4 h-4" />
                 </div>
-                <ArrowUpRight className="w-4 h-4 text-neutral-600 group-hover:text-violet-400 transition" />
+                <ArrowUpRight className="w-4 h-4 text-[#EAF4F4]/40 group-hover:text-[#03D26F] transition" />
               </div>
-              <h4 className="font-semibold text-white text-sm">Product Registry</h4>
-              <p className="text-neutral-500 text-xs leading-relaxed">
+              <h3 className="font-bold text-white text-sm">Product Registry</h3>
+              <p className="text-[#EAF4F4]/70 text-xs leading-relaxed">
                 Define master catalog items, SKU identifiers, base unit pricing, and safety reorder points.
               </p>
             </Link>
@@ -454,16 +469,16 @@ export default function Dashboard() {
             {/* Inventory Card */}
             <Link
               to="/inventory"
-              className="p-5 rounded-2xl bg-neutral-900/30 hover:bg-neutral-900/50 border border-white/[0.06] hover:border-teal-500/20 transition group space-y-2 block"
+              className="p-5 rounded-2xl bg-[#01353e]/60 hover:bg-[#01353e]/90 border border-white/[0.08] hover:border-cyan-400/30 transition group space-y-2 block"
             >
               <div className="flex items-center justify-between">
-                <div className="p-2.5 bg-teal-500/10 rounded-xl text-teal-400 group-hover:scale-105 transition">
+                <div className="p-2.5 bg-cyan-500/15 rounded-xl text-cyan-300 group-hover:scale-105 transition">
                   <Boxes className="w-4 h-4" />
                 </div>
-                <ArrowUpRight className="w-4 h-4 text-neutral-600 group-hover:text-teal-400 transition" />
+                <ArrowUpRight className="w-4 h-4 text-[#EAF4F4]/40 group-hover:text-cyan-300 transition" />
               </div>
-              <h4 className="font-semibold text-white text-sm">Inventory & Stock Levels</h4>
-              <p className="text-neutral-500 text-xs leading-relaxed">
+              <h3 className="font-bold text-white text-sm">Inventory & Stock Levels</h3>
+              <p className="text-[#EAF4F4]/70 text-xs leading-relaxed">
                 View real-time physical on-hand units, reserved commitments, and derived available stock.
               </p>
             </Link>
@@ -471,16 +486,16 @@ export default function Dashboard() {
             {/* Transactions Card */}
             <Link
               to="/transactions"
-              className="p-5 rounded-2xl bg-neutral-900/30 hover:bg-neutral-900/50 border border-white/[0.06] hover:border-blue-500/20 transition group space-y-2 block"
+              className="p-5 rounded-2xl bg-[#01353e]/60 hover:bg-[#01353e]/90 border border-white/[0.08] hover:border-[#CEF431]/30 transition group space-y-2 block"
             >
               <div className="flex items-center justify-between">
-                <div className="p-2.5 bg-blue-500/10 rounded-xl text-blue-400 group-hover:scale-105 transition">
+                <div className="p-2.5 bg-[#CEF431]/15 rounded-xl text-[#CEF431] group-hover:scale-105 transition">
                   <ArrowRightLeft className="w-4 h-4" />
                 </div>
-                <ArrowUpRight className="w-4 h-4 text-neutral-600 group-hover:text-blue-400 transition" />
+                <ArrowUpRight className="w-4 h-4 text-[#EAF4F4]/40 group-hover:text-[#CEF431] transition" />
               </div>
-              <h4 className="font-semibold text-white text-sm">Stock Movement Ledger</h4>
-              <p className="text-neutral-500 text-xs leading-relaxed">
+              <h3 className="font-bold text-white text-sm">Stock Movement Ledger</h3>
+              <p className="text-[#EAF4F4]/70 text-xs leading-relaxed">
                 Execute verified and immutable Sales, Restocks, Returns, and Adjustments with full audit trails.
               </p>
             </Link>
@@ -489,16 +504,21 @@ export default function Dashboard() {
             {isAdmin && (
               <Link
                 to="/users"
-                className="p-5 rounded-2xl bg-neutral-900/30 hover:bg-neutral-900/50 border border-violet-500/20 hover:border-violet-500/40 transition group space-y-2 block"
+                className="p-5 rounded-2xl bg-[#01353e]/60 hover:bg-[#01353e]/90 border border-[#CEF431]/20 hover:border-[#CEF431]/40 transition group space-y-2 block"
               >
                 <div className="flex items-center justify-between">
-                  <div className="p-2.5 bg-violet-500/10 rounded-xl text-violet-400 group-hover:scale-105 transition">
+                  <div className="p-2.5 bg-[#CEF431]/15 rounded-xl text-[#CEF431] group-hover:scale-105 transition">
                     <Users className="w-4 h-4" />
                   </div>
-                  <ArrowUpRight className="w-4 h-4 text-neutral-600 group-hover:text-violet-400 transition" />
+                  <ArrowUpRight className="w-4 h-4 text-[#EAF4F4]/40 group-hover:text-[#CEF431] transition" />
                 </div>
-                <h4 className="font-semibold text-white text-sm">User Management</h4>
-                <p className="text-neutral-500 text-xs leading-relaxed">
+                <div className="flex items-center gap-1.5">
+                  <h3 className="font-bold text-white text-sm">User Management</h3>
+                  <span className="px-1.5 py-0.2 rounded text-[9px] font-mono font-bold uppercase bg-[#CEF431]/20 text-[#CEF431]">
+                    ADMIN
+                  </span>
+                </div>
+                <p className="text-[#EAF4F4]/70 text-xs leading-relaxed">
                   Provision and manage internal Staff and Administrator accounts with RBAC controls.
                 </p>
               </Link>
@@ -508,9 +528,10 @@ export default function Dashboard() {
       </main>
 
       {/* Footer */}
-      <footer className="border-t border-white/[0.04] py-6 text-center text-xs text-neutral-600 mt-auto">
-        SmartSupply • AI-Based Inventory Replenishment & Supplier Decision Support System
+      <footer className="border-t border-white/[0.08] py-6 text-center text-xs text-[#EAF4F4]/50 bg-[#01272e] mt-auto">
+        SmartSupply AI • Autonomous Inventory Replenishment & Supplier Decision Support System
       </footer>
     </div>
   );
 }
+

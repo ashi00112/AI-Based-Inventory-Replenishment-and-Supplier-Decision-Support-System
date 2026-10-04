@@ -369,21 +369,21 @@ export default function Suppliers() {
   };
 
   return (
-    <div className="min-h-screen bg-neutral-950 text-neutral-100 flex flex-col font-sans">
+    <div className="min-h-screen bg-[#01272e] text-[#EAF4F4] flex flex-col font-sans selection:bg-[#03D26F]/30 selection:text-white">
       <Navbar />
 
-      <main className="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 py-8 space-y-6">
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-8 space-y-6">
         {/* Page Header */}
-        <section className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-white/[0.06] pb-6">
+        <section className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-white/[0.08] pb-6">
           <div>
-            <div className="flex items-center gap-2 text-xs font-medium text-violet-400 mb-1">
+            <div className="flex items-center gap-2 text-xs font-semibold text-[#03D26F] mb-1.5 font-mono">
               <Truck className="w-4 h-4" />
-              <span>SmartSupply Electronics Procurement</span>
+              <span>SmartSupply Autonomous Logistics</span>
             </div>
-            <h1 className="text-2xl font-bold text-white tracking-tight">
+            <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
               Supplier & Commercial Terms
             </h1>
-            <p className="text-xs text-neutral-400 mt-1">
+            <p className="text-xs text-[#EAF4F4]/70 mt-1">
               Manage authorized merchandise vendors and their product-specific wholesale commercial terms (Unit Cost, MOQ, Lead Time).
             </p>
           </div>
@@ -393,9 +393,9 @@ export default function Suppliers() {
               <button
                 type="button"
                 onClick={handleOpenAddSupplier}
-                className="inline-flex items-center gap-2 px-4 py-2 bg-violet-600 hover:bg-violet-500 text-white rounded-lg text-xs font-semibold shadow-lg shadow-violet-600/20 transition-all"
+                className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#03D26F] hover:bg-[#02be63] text-[#161514] rounded-xl text-xs font-bold shadow-lg shadow-[#03D26F]/25 transition-all cursor-pointer"
               >
-                <Plus className="w-4 h-4" />
+                <Plus className="w-4 h-4 text-[#161514]" />
                 <span>Add Supplier</span>
               </button>
             ) : (
@@ -403,9 +403,9 @@ export default function Suppliers() {
                 type="button"
                 onClick={handleOpenAddOffer}
                 disabled={suppliers.length === 0 || productsList.length === 0}
-                className="inline-flex items-center gap-2 px-4 py-2 bg-violet-600 hover:bg-violet-500 disabled:opacity-50 text-white rounded-lg text-xs font-semibold shadow-lg shadow-violet-600/20 transition-all"
+                className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#03D26F] hover:bg-[#02be63] disabled:opacity-50 text-[#161514] rounded-xl text-xs font-bold shadow-lg shadow-[#03D26F]/25 transition-all cursor-pointer"
               >
-                <Plus className="w-4 h-4" />
+                <Plus className="w-4 h-4 text-[#161514]" />
                 <span>Add Commercial Offer</span>
               </button>
             )}
@@ -414,43 +414,43 @@ export default function Suppliers() {
 
         {/* Global Feedback Notifications */}
         {serverError && (
-          <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-300 text-xs flex items-center justify-between">
+          <div className="p-4 rounded-2xl bg-rose-500/15 border border-rose-500/30 text-rose-300 text-xs flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
+              <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
               <span>{serverError}</span>
             </div>
-            <button type="button" onClick={() => setServerError('')} className="text-red-400 hover:text-white">
+            <button type="button" onClick={() => setServerError('')} className="text-[#EAF4F4]/60 hover:text-white cursor-pointer">
               <X className="w-4 h-4" />
             </button>
           </div>
         )}
 
         {successMessage && (
-          <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 text-xs flex items-center justify-between">
+          <div className="p-4 rounded-2xl bg-[#03D26F]/15 border border-[#03D26F]/30 text-[#03D26F] text-xs flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-              <span>{successMessage}</span>
+              <CheckCircle2 className="w-4 h-4 text-[#03D26F] shrink-0" />
+              <span className="font-semibold">{successMessage}</span>
             </div>
-            <button type="button" onClick={() => setSuccessMessage('')} className="text-emerald-400 hover:text-white">
+            <button type="button" onClick={() => setSuccessMessage('')} className="text-[#EAF4F4]/60 hover:text-white cursor-pointer">
               <X className="w-4 h-4" />
             </button>
           </div>
         )}
 
         {/* View Switcher Tabs */}
-        <div className="flex items-center gap-2 border-b border-white/[0.06] pb-1">
+        <div className="flex items-center gap-2 border-b border-white/[0.08] pb-1">
           <button
             type="button"
             onClick={() => setActiveTab('suppliers')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold transition-all ${
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
               activeTab === 'suppliers'
-                ? 'bg-violet-500/15 text-violet-300 border border-violet-500/30'
-                : 'text-neutral-400 hover:text-white hover:bg-white/[0.03]'
+                ? 'bg-[#03D26F]/20 text-[#03D26F] border border-[#03D26F]/40'
+                : 'text-[#EAF4F4]/70 hover:text-white hover:bg-white/[0.04]'
             }`}
           >
             <Building2 className="w-3.5 h-3.5" />
             <span>Vendors Directory</span>
-            <span className="ml-1 text-[10px] px-1.5 py-0.5 rounded-full bg-neutral-800 text-neutral-300 font-mono">
+            <span className="ml-1 text-[10px] px-2 py-0.5 rounded-full bg-[#01272e] text-[#03D26F] font-mono font-bold border border-[#03D26F]/30">
               {suppliers.length}
             </span>
           </button>
@@ -458,15 +458,15 @@ export default function Suppliers() {
           <button
             type="button"
             onClick={() => setActiveTab('offers')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold transition-all ${
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
               activeTab === 'offers'
-                ? 'bg-violet-500/15 text-violet-300 border border-violet-500/30'
-                : 'text-neutral-400 hover:text-white hover:bg-white/[0.03]'
+                ? 'bg-[#03D26F]/20 text-[#03D26F] border border-[#03D26F]/40'
+                : 'text-[#EAF4F4]/70 hover:text-white hover:bg-white/[0.04]'
             }`}
           >
             <Layers className="w-3.5 h-3.5" />
             <span>Product Commercial Terms</span>
-            <span className="ml-1 text-[10px] px-1.5 py-0.5 rounded-full bg-neutral-800 text-neutral-300 font-mono">
+            <span className="ml-1 text-[10px] px-2 py-0.5 rounded-full bg-[#01272e] text-[#03D26F] font-mono font-bold border border-[#03D26F]/30">
               {offers.length}
             </span>
           </button>

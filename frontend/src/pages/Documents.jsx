@@ -319,7 +319,7 @@ export default function Documents() {
   }, [editForm.document_type]);
 
   return (
-    <div className="min-h-screen bg-neutral-950 text-neutral-100 flex flex-col">
+    <div className="min-h-screen bg-[#01272e] text-[#EAF4F4] flex flex-col">
       <Navbar />
 
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -327,12 +327,12 @@ export default function Documents() {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
           <div>
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-violet-500/10 border border-violet-500/20 flex items-center justify-center text-violet-400">
+              <div className="w-10 h-10 rounded-xl bg-malachite/10 border border-malachite/20 flex items-center justify-center text-malachite">
                 <FileText className="w-5 h-5" />
               </div>
               <div>
                 <h1 className="text-xl font-bold text-white tracking-tight">Document Repository</h1>
-                <p className="text-xs text-neutral-400 mt-0.5">
+                <p className="text-xs text-[#EAF4F4]/60 mt-0.5">
                   Procurement policies, replenishment rules, vendor contracts, and supplier SLAs
                 </p>
               </div>
@@ -344,17 +344,17 @@ export default function Documents() {
               type="button"
               onClick={fetchData}
               disabled={loading}
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-medium bg-white/[0.04] hover:bg-white/[0.08] text-neutral-300 border border-white/[0.08] transition"
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-white/[0.05] hover:bg-white/[0.1] text-white border border-white/[0.08] transition"
             >
-              <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+              <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin text-malachite' : ''}`} />
               <span>Refresh</span>
             </button>
             <button
               type="button"
               onClick={handleOpenUploadModal}
-              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white shadow-lg shadow-violet-500/20 transition"
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold bg-malachite hover:bg-[#03b860] text-[#161514] shadow-lg shadow-malachite/20 transition cursor-pointer"
             >
-              <Upload className="w-3.5 h-3.5" />
+              <Upload className="w-3.5 h-3.5 text-[#161514]" />
               <span>Upload PDF</span>
             </button>
           </div>
@@ -362,7 +362,7 @@ export default function Documents() {
 
         {/* Alerts */}
         {error && (
-          <div className="mb-6 p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-300 flex items-start gap-3 text-xs animate-in">
+          <div className="mb-6 p-4 rounded-xl bg-red-500/10 border border-red-500/25 text-red-200 flex items-start gap-3 text-xs animate-in">
             <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-red-400" />
             <div className="flex-1">{error}</div>
             <button type="button" onClick={() => setError(null)} className="text-red-400 hover:text-white">
@@ -372,27 +372,27 @@ export default function Documents() {
         )}
 
         {successMsg && (
-          <div className="mb-6 p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 flex items-center gap-3 text-xs animate-in">
-            <CheckCircle className="w-4 h-4 shrink-0 text-emerald-400" />
+          <div className="mb-6 p-4 rounded-xl bg-malachite/15 border border-malachite/30 text-malachite flex items-center gap-3 text-xs animate-in">
+            <CheckCircle className="w-4 h-4 shrink-0 text-malachite" />
             <div className="flex-1">{successMsg}</div>
-            <button type="button" onClick={() => setSuccessMsg(null)} className="text-emerald-400 hover:text-white">
+            <button type="button" onClick={() => setSuccessMsg(null)} className="text-malachite hover:text-white">
               <X className="w-4 h-4" />
             </button>
           </div>
         )}
 
         {/* Filters Card */}
-        <div className="p-4 rounded-2xl bg-neutral-900/40 border border-white/[0.06] mb-6">
+        <div className="p-4 rounded-2xl bg-[#01353e] border border-white/[0.08] shadow-lg mb-6">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
             {/* Search */}
             <form onSubmit={handleSearchSubmit} className="relative">
-              <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-neutral-500" />
+              <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[#EAF4F4]/40" />
               <input
                 type="text"
                 placeholder="Search title or filename..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-9 pr-3 py-2 text-xs rounded-xl bg-neutral-950/60 border border-white/[0.08] text-white placeholder-neutral-500 focus:outline-none focus:border-violet-500 transition"
+                className="w-full pl-9 pr-3 py-2 text-xs rounded-xl bg-[#01272e] border border-white/[0.08] text-white placeholder-[#EAF4F4]/40 focus:outline-none focus:border-malachite transition"
               />
             </form>
 
@@ -401,7 +401,7 @@ export default function Documents() {
               <select
                 value={selectedTypeFilter}
                 onChange={(e) => setSelectedTypeFilter(e.target.value)}
-                className="w-full px-3 py-2 text-xs rounded-xl bg-neutral-950/60 border border-white/[0.08] text-neutral-300 focus:outline-none focus:border-violet-500 transition"
+                className="w-full px-3 py-2 text-xs rounded-xl bg-[#01272e] border border-white/[0.08] text-white focus:outline-none focus:border-malachite transition"
               >
                 <option value="">All Document Types</option>
                 {DOCUMENT_TYPES.map((t) => (
@@ -417,7 +417,7 @@ export default function Documents() {
               <select
                 value={selectedSupplierFilter}
                 onChange={(e) => setSelectedSupplierFilter(e.target.value)}
-                className="w-full px-3 py-2 text-xs rounded-xl bg-neutral-950/60 border border-white/[0.08] text-neutral-300 focus:outline-none focus:border-violet-500 transition"
+                className="w-full px-3 py-2 text-xs rounded-xl bg-[#01272e] border border-white/[0.08] text-white focus:outline-none focus:border-malachite transition"
               >
                 <option value="">All Suppliers</option>
                 {suppliers.map((s) => (
@@ -433,7 +433,7 @@ export default function Documents() {
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
-                className="w-full px-3 py-2 text-xs rounded-xl bg-neutral-950/60 border border-white/[0.08] text-neutral-300 focus:outline-none focus:border-violet-500 transition"
+                className="w-full px-3 py-2 text-xs rounded-xl bg-[#01272e] border border-white/[0.08] text-white focus:outline-none focus:border-malachite transition"
               >
                 <option value="">All Statuses</option>
                 <option value="active">Active Only</option>
@@ -444,10 +444,10 @@ export default function Documents() {
         </div>
 
         {/* Documents Table */}
-        <div className="rounded-2xl bg-neutral-900/40 border border-white/[0.06] overflow-hidden shadow-2xl">
+        <div className="rounded-2xl bg-[#01353e] border border-white/[0.08] overflow-hidden shadow-xl">
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs text-neutral-300">
-              <thead className="bg-white/[0.02] border-b border-white/[0.06] text-neutral-400 font-medium">
+            <table className="w-full text-left text-xs text-[#EAF4F4]">
+              <thead className="bg-[#01272e]/90 border-b border-white/[0.08] text-[#EAF4F4]/60 font-semibold uppercase tracking-wider text-[10px]">
                 <tr>
                   <th className="py-3.5 px-4">Title</th>
                   <th className="py-3.5 px-4">Type</th>
@@ -459,20 +459,20 @@ export default function Documents() {
                   <th className="py-3.5 px-4 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-white/[0.04]">
+              <tbody className="divide-y divide-white/[0.05]">
                 {loading ? (
                   <tr>
-                    <td colSpan={8} className="py-12 text-center text-neutral-500">
-                      <RefreshCw className="w-5 h-5 animate-spin mx-auto mb-2 text-neutral-400" />
+                    <td colSpan={8} className="py-12 text-center text-[#EAF4F4]/50">
+                      <RefreshCw className="w-5 h-5 animate-spin mx-auto mb-2 text-malachite" />
                       Loading document repository...
                     </td>
                   </tr>
                 ) : documents.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="py-12 text-center text-neutral-500">
-                      <FileText className="w-8 h-8 mx-auto mb-2 text-neutral-600 opacity-60" />
-                      <p className="text-sm font-medium text-neutral-400">No documents found</p>
-                      <p className="text-xs text-neutral-500 mt-1">
+                    <td colSpan={8} className="py-12 text-center text-[#EAF4F4]/50">
+                      <FileText className="w-8 h-8 mx-auto mb-2 text-[#EAF4F4]/30" />
+                      <p className="text-sm font-semibold text-white">No documents found</p>
+                      <p className="text-xs text-[#EAF4F4]/60 mt-1">
                         Upload procurement policies, vendor contracts, or supplier SLAs to get started.
                       </p>
                     </td>
@@ -481,41 +481,41 @@ export default function Documents() {
                   documents.map((doc) => {
                     const typeDef = DOCUMENT_TYPES.find((t) => t.value === doc.document_type);
                     return (
-                      <tr key={doc.id} className="hover:bg-white/[0.02] transition">
-                        <td className="py-3.5 px-4 font-medium text-white max-w-[220px] truncate" title={doc.title}>
+                      <tr key={doc.id} className="hover:bg-white/[0.03] transition">
+                        <td className="py-3.5 px-4 font-semibold text-white max-w-[220px] truncate" title={doc.title}>
                           {doc.title}
                         </td>
                         <td className="py-3.5 px-4">
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-medium bg-violet-500/10 text-violet-300 border border-violet-500/20">
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-malachite/10 text-malachite border border-malachite/20">
                             {typeDef?.label || doc.document_type}
                           </span>
                         </td>
                         <td className="py-3.5 px-4">
                           {doc.supplier ? (
-                            <span className="text-neutral-300 inline-flex items-center gap-1.5" title={doc.supplier.name}>
-                              <Building2 className="w-3.5 h-3.5 text-neutral-500 shrink-0" />
-                              <span className="font-semibold text-neutral-200">{doc.supplier.supplier_code}</span>
+                            <span className="text-white inline-flex items-center gap-1.5" title={doc.supplier.name}>
+                              <Building2 className="w-3.5 h-3.5 text-starship shrink-0" />
+                              <span className="font-semibold text-starship font-mono">{doc.supplier.supplier_code}</span>
                             </span>
                           ) : (
-                            <span className="text-neutral-500 italic">Company-wide</span>
+                            <span className="text-[#EAF4F4]/40 italic">Company-wide</span>
                           )}
                         </td>
-                        <td className="py-3.5 px-4 max-w-[180px] truncate font-mono text-[11px] text-neutral-400" title={doc.original_filename}>
+                        <td className="py-3.5 px-4 max-w-[180px] truncate font-mono text-[11px] text-[#EAF4F4]/60" title={doc.original_filename}>
                           {doc.original_filename}
                         </td>
-                        <td className="py-3.5 px-4 text-neutral-400">
+                        <td className="py-3.5 px-4 text-[#EAF4F4]/60">
                           {formatBytes(doc.file_size_bytes)}
                         </td>
-                        <td className="py-3.5 px-4 text-neutral-400">
+                        <td className="py-3.5 px-4 text-[#EAF4F4]/60">
                           {formatDate(doc.created_at)}
                         </td>
                         <td className="py-3.5 px-4">
                           {doc.is_active ? (
-                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-malachite/15 text-malachite border border-malachite/30">
                               Active
                             </span>
                           ) : (
-                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-neutral-800 text-neutral-400 border border-white/[0.06]">
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-white/[0.05] text-[#EAF4F4]/50 border border-white/[0.08]">
                               Inactive
                             </span>
                           )}
@@ -525,7 +525,7 @@ export default function Documents() {
                             <button
                               type="button"
                               onClick={() => handleDownload(doc)}
-                              className="p-1.5 rounded-lg text-neutral-400 hover:text-white hover:bg-white/[0.06] transition"
+                              className="p-1.5 rounded-lg text-[#EAF4F4]/70 hover:text-malachite hover:bg-malachite/10 transition"
                               title="Download PDF"
                             >
                               <Download className="w-4 h-4" />
@@ -533,7 +533,7 @@ export default function Documents() {
                             <button
                               type="button"
                               onClick={() => handleOpenEditModal(doc)}
-                              className="p-1.5 rounded-lg text-neutral-400 hover:text-white hover:bg-white/[0.06] transition"
+                              className="p-1.5 rounded-lg text-[#EAF4F4]/70 hover:text-white hover:bg-white/[0.08] transition"
                               title="Edit Metadata"
                             >
                               <Edit className="w-4 h-4" />
@@ -541,7 +541,7 @@ export default function Documents() {
                             <button
                               type="button"
                               onClick={() => handleOpenDeleteModal(doc)}
-                              className="p-1.5 rounded-lg text-neutral-400 hover:text-red-400 hover:bg-red-500/[0.08] transition"
+                              className="p-1.5 rounded-lg text-[#EAF4F4]/70 hover:text-red-400 hover:bg-red-500/10 transition"
                               title="Delete Document"
                             >
                               <Trash2 className="w-4 h-4" />
@@ -560,11 +560,11 @@ export default function Documents() {
 
       {/* Upload Modal */}
       {uploadModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-in">
-          <div className="w-full max-w-lg rounded-2xl bg-neutral-900 border border-white/[0.08] p-6 shadow-2xl">
-            <div className="flex items-center justify-between pb-4 border-b border-white/[0.06]">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#01272e]/85 backdrop-blur-md animate-in">
+          <div className="w-full max-w-lg rounded-2xl bg-[#01353e] border border-white/[0.1] p-6 shadow-2xl">
+            <div className="flex items-center justify-between pb-4 border-b border-white/[0.08]">
               <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-lg bg-violet-500/10 border border-violet-500/20 flex items-center justify-center text-violet-400">
+                <div className="w-8 h-8 rounded-lg bg-malachite/10 border border-malachite/20 flex items-center justify-center text-malachite">
                   <Upload className="w-4 h-4" />
                 </div>
                 <h2 className="text-base font-bold text-white">Upload Procurement PDF</h2>
@@ -572,7 +572,7 @@ export default function Documents() {
               <button
                 type="button"
                 onClick={() => setUploadModalOpen(false)}
-                className="text-neutral-400 hover:text-white"
+                className="text-[#EAF4F4]/60 hover:text-white"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -580,7 +580,7 @@ export default function Documents() {
 
             <form onSubmit={handleUploadSubmit} className="space-y-4 pt-4">
               <div>
-                <label className="block text-xs font-medium text-neutral-300 mb-1">
+                <label className="block text-xs font-medium text-[#EAF4F4]/80 mb-1">
                   Document Title <span className="text-red-400">*</span>
                 </label>
                 <input
@@ -589,18 +589,18 @@ export default function Documents() {
                   placeholder="e.g. Master Supply Agreement 2026"
                   value={uploadForm.title}
                   onChange={(e) => setUploadForm({ ...uploadForm, title: e.target.value })}
-                  className="w-full px-3 py-2 text-xs rounded-xl bg-neutral-950/80 border border-white/[0.08] text-white placeholder-neutral-500 focus:outline-none focus:border-violet-500"
+                  className="w-full px-3 py-2 text-xs rounded-xl bg-[#01272e] border border-white/[0.1] text-white placeholder-[#EAF4F4]/40 focus:outline-none focus:border-malachite"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-neutral-300 mb-1">
+                <label className="block text-xs font-medium text-[#EAF4F4]/80 mb-1">
                   Document Type <span className="text-red-400">*</span>
                 </label>
                 <select
                   value={uploadForm.document_type}
                   onChange={handleUploadTypeChange}
-                  className="w-full px-3 py-2 text-xs rounded-xl bg-neutral-950/80 border border-white/[0.08] text-white focus:outline-none focus:border-violet-500"
+                  className="w-full px-3 py-2 text-xs rounded-xl bg-[#01272e] border border-white/[0.1] text-white focus:outline-none focus:border-malachite"
                 >
                   {DOCUMENT_TYPES.map((t) => (
                     <option key={t.value} value={t.value}>
@@ -608,7 +608,7 @@ export default function Documents() {
                     </option>
                   ))}
                 </select>
-                <p className="text-[11px] text-neutral-500 mt-1">
+                <p className="text-[11px] text-[#EAF4F4]/50 mt-1">
                   {uploadTypeInfo?.supplierRule === 'required'
                     ? '⚠️ Requires an active supplier linkage.'
                     : uploadTypeInfo?.supplierRule === 'none'
@@ -618,12 +618,12 @@ export default function Documents() {
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-neutral-300 mb-1">
+                <label className="block text-xs font-medium text-[#EAF4F4]/80 mb-1">
                   Supplier{' '}
                   {uploadTypeInfo?.supplierRule === 'required' ? (
                     <span className="text-red-400">*</span>
                   ) : (
-                    <span className="text-neutral-500">(Optional)</span>
+                    <span className="text-[#EAF4F4]/50">(Optional)</span>
                   )}
                 </label>
                 <select
@@ -631,7 +631,7 @@ export default function Documents() {
                   required={uploadTypeInfo?.supplierRule === 'required'}
                   value={uploadForm.supplier_id}
                   onChange={(e) => setUploadForm({ ...uploadForm, supplier_id: e.target.value })}
-                  className={`w-full px-3 py-2 text-xs rounded-xl bg-neutral-950/80 border border-white/[0.08] text-white focus:outline-none focus:border-violet-500 ${
+                  className={`w-full px-3 py-2 text-xs rounded-xl bg-[#01272e] border border-white/[0.1] text-white focus:outline-none focus:border-malachite ${
                     uploadTypeInfo?.supplierRule === 'none' ? 'opacity-40 cursor-not-allowed' : ''
                   }`}
                 >
@@ -647,14 +647,14 @@ export default function Documents() {
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-neutral-300 mb-1">
+                <label className="block text-xs font-medium text-[#EAF4F4]/80 mb-1">
                   PDF File <span className="text-red-400">*</span>
                 </label>
-                <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-dashed border-white/[0.1] hover:border-violet-500/50 rounded-xl bg-neutral-950/40 transition cursor-pointer">
+                <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-dashed border-white/[0.15] hover:border-malachite/50 rounded-xl bg-[#01272e]/60 transition cursor-pointer">
                   <div className="space-y-1 text-center">
-                    <FileCheck className="mx-auto h-8 w-8 text-neutral-400" />
-                    <div className="flex text-xs text-neutral-400">
-                      <label className="relative cursor-pointer rounded-md font-semibold text-violet-400 hover:text-violet-300">
+                    <FileCheck className="mx-auto h-8 w-8 text-malachite" />
+                    <div className="flex text-xs text-[#EAF4F4]/70">
+                      <label className="relative cursor-pointer rounded-md font-semibold text-malachite hover:underline">
                         <span>Select PDF file</span>
                         <input
                           type="file"
@@ -664,11 +664,11 @@ export default function Documents() {
                           required
                         />
                       </label>
-                      <p className="pl-1 text-neutral-500">or drag and drop</p>
+                      <p className="pl-1 text-[#EAF4F4]/50">or drag and drop</p>
                     </div>
-                    <p className="text-[10px] text-neutral-500">PDF up to 10 MB with valid %PDF- header</p>
+                    <p className="text-[10px] text-[#EAF4F4]/50">PDF up to 10 MB with valid %PDF- header</p>
                     {uploadFileName && (
-                      <p className="text-xs font-medium text-violet-300 mt-2 font-mono">
+                      <p className="text-xs font-semibold text-malachite mt-2 font-mono">
                         Selected: {uploadFileName}
                       </p>
                     )}
@@ -676,20 +676,20 @@ export default function Documents() {
                 </div>
               </div>
 
-              <div className="flex items-center justify-end gap-3 pt-4 border-t border-white/[0.06]">
+              <div className="flex items-center justify-end gap-3 pt-4 border-t border-white/[0.08]">
                 <button
                   type="button"
                   onClick={() => setUploadModalOpen(false)}
-                  className="px-4 py-2 rounded-xl text-xs font-medium text-neutral-400 hover:text-white transition"
+                  className="px-4 py-2 rounded-xl text-xs font-semibold text-[#EAF4F4]/70 hover:text-white transition"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={actionLoading}
-                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold bg-violet-600 hover:bg-violet-500 text-white disabled:opacity-50 transition"
+                  className="inline-flex items-center gap-1.5 px-5 py-2 rounded-xl text-xs font-bold bg-malachite hover:bg-[#03b860] text-[#161514] shadow-lg shadow-malachite/20 disabled:opacity-50 transition cursor-pointer"
                 >
-                  {actionLoading ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
+                  {actionLoading ? <RefreshCw className="w-3.5 h-3.5 animate-spin text-[#161514]" /> : <Upload className="w-3.5 h-3.5 text-[#161514]" />}
                   <span>{actionLoading ? 'Uploading...' : 'Confirm Upload'}</span>
                 </button>
               </div>
@@ -700,11 +700,11 @@ export default function Documents() {
 
       {/* Edit Metadata Modal */}
       {editModalOpen && selectedDoc && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-in">
-          <div className="w-full max-w-lg rounded-2xl bg-neutral-900 border border-white/[0.08] p-6 shadow-2xl">
-            <div className="flex items-center justify-between pb-4 border-b border-white/[0.06]">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#01272e]/85 backdrop-blur-md animate-in">
+          <div className="w-full max-w-lg rounded-2xl bg-[#01353e] border border-white/[0.1] p-6 shadow-2xl">
+            <div className="flex items-center justify-between pb-4 border-b border-white/[0.08]">
               <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-lg bg-violet-500/10 border border-violet-500/20 flex items-center justify-center text-violet-400">
+                <div className="w-8 h-8 rounded-lg bg-malachite/10 border border-malachite/20 flex items-center justify-center text-malachite">
                   <Edit className="w-4 h-4" />
                 </div>
                 <h2 className="text-base font-bold text-white">Edit Document Metadata</h2>
@@ -712,7 +712,7 @@ export default function Documents() {
               <button
                 type="button"
                 onClick={() => setEditModalOpen(false)}
-                className="text-neutral-400 hover:text-white"
+                className="text-[#EAF4F4]/60 hover:text-white"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -720,22 +720,22 @@ export default function Documents() {
 
             <form onSubmit={handleEditSubmit} className="space-y-4 pt-4">
               <div>
-                <label className="block text-xs font-medium text-neutral-300 mb-1">Title</label>
+                <label className="block text-xs font-medium text-[#EAF4F4]/80 mb-1">Title</label>
                 <input
                   type="text"
                   required
                   value={editForm.title}
                   onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
-                  className="w-full px-3 py-2 text-xs rounded-xl bg-neutral-950/80 border border-white/[0.08] text-white focus:outline-none focus:border-violet-500"
+                  className="w-full px-3 py-2 text-xs rounded-xl bg-[#01272e] border border-white/[0.1] text-white focus:outline-none focus:border-malachite"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-neutral-300 mb-1">Document Type</label>
+                <label className="block text-xs font-medium text-[#EAF4F4]/80 mb-1">Document Type</label>
                 <select
                   value={editForm.document_type}
                   onChange={handleEditTypeChange}
-                  className="w-full px-3 py-2 text-xs rounded-xl bg-neutral-950/80 border border-white/[0.08] text-white focus:outline-none focus:border-violet-500"
+                  className="w-full px-3 py-2 text-xs rounded-xl bg-[#01272e] border border-white/[0.1] text-white focus:outline-none focus:border-malachite"
                 >
                   {DOCUMENT_TYPES.map((t) => (
                     <option key={t.value} value={t.value}>
@@ -746,12 +746,12 @@ export default function Documents() {
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-neutral-300 mb-1">
+                <label className="block text-xs font-medium text-[#EAF4F4]/80 mb-1">
                   Supplier{' '}
                   {editTypeInfo?.supplierRule === 'required' ? (
                     <span className="text-red-400">*</span>
                   ) : (
-                    <span className="text-neutral-500">(Optional)</span>
+                    <span className="text-[#EAF4F4]/50">(Optional)</span>
                   )}
                 </label>
                 <select
@@ -759,7 +759,7 @@ export default function Documents() {
                   required={editTypeInfo?.supplierRule === 'required'}
                   value={editForm.supplier_id}
                   onChange={(e) => setEditForm({ ...editForm, supplier_id: e.target.value })}
-                  className={`w-full px-3 py-2 text-xs rounded-xl bg-neutral-950/80 border border-white/[0.08] text-white focus:outline-none focus:border-violet-500 ${
+                  className={`w-full px-3 py-2 text-xs rounded-xl bg-[#01272e] border border-white/[0.1] text-white focus:outline-none focus:border-malachite ${
                     editTypeInfo?.supplierRule === 'none' ? 'opacity-40 cursor-not-allowed' : ''
                   }`}
                 >
@@ -780,27 +780,27 @@ export default function Documents() {
                   id="editIsActive"
                   checked={editForm.is_active}
                   onChange={(e) => setEditForm({ ...editForm, is_active: e.target.checked })}
-                  className="w-4 h-4 rounded text-violet-600 bg-neutral-950 border-white/[0.1] focus:ring-violet-500"
+                  className="w-4 h-4 rounded text-malachite bg-[#01272e] border-white/[0.1] focus:ring-malachite"
                 />
-                <label htmlFor="editIsActive" className="text-xs text-neutral-300">
+                <label htmlFor="editIsActive" className="text-xs text-[#EAF4F4]/80">
                   Active in repository
                 </label>
               </div>
 
-              <div className="flex items-center justify-end gap-3 pt-4 border-t border-white/[0.06]">
+              <div className="flex items-center justify-end gap-3 pt-4 border-t border-white/[0.08]">
                 <button
                   type="button"
                   onClick={() => setEditModalOpen(false)}
-                  className="px-4 py-2 rounded-xl text-xs font-medium text-neutral-400 hover:text-white transition"
+                  className="px-4 py-2 rounded-xl text-xs font-semibold text-[#EAF4F4]/70 hover:text-white transition"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={actionLoading}
-                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold bg-violet-600 hover:bg-violet-500 text-white disabled:opacity-50 transition"
+                  className="inline-flex items-center gap-1.5 px-5 py-2 rounded-xl text-xs font-bold bg-malachite hover:bg-[#03b860] text-[#161514] shadow-lg shadow-malachite/20 disabled:opacity-50 transition cursor-pointer"
                 >
-                  {actionLoading ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Edit className="w-3.5 h-3.5" />}
+                  {actionLoading ? <RefreshCw className="w-3.5 h-3.5 animate-spin text-[#161514]" /> : <Edit className="w-3.5 h-3.5 text-[#161514]" />}
                   <span>{actionLoading ? 'Saving...' : 'Save Changes'}</span>
                 </button>
               </div>
@@ -811,19 +811,19 @@ export default function Documents() {
 
       {/* Delete Confirmation Modal */}
       {deleteModalOpen && selectedDoc && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-in">
-          <div className="w-full max-w-md rounded-2xl bg-neutral-900 border border-white/[0.08] p-6 shadow-2xl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#01272e]/85 backdrop-blur-md animate-in">
+          <div className="w-full max-w-md rounded-2xl bg-[#01353e] border border-white/[0.1] p-6 shadow-2xl">
             <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 rounded-xl bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-400 shrink-0">
+              <div className="w-10 h-10 rounded-xl bg-red-500/10 border border-red-500/25 flex items-center justify-center text-red-400 shrink-0">
                 <Trash2 className="w-5 h-5" />
               </div>
               <div>
                 <h3 className="text-base font-bold text-white">Delete Document</h3>
-                <p className="text-xs text-neutral-400">This action will delete the database row and stored PDF file.</p>
+                <p className="text-xs text-[#EAF4F4]/60">This action will delete the database row and stored PDF file.</p>
               </div>
             </div>
 
-            <p className="text-xs text-neutral-300 p-3 rounded-xl bg-neutral-950/60 border border-white/[0.04] mb-6">
+            <p className="text-xs text-[#EAF4F4]/80 p-3 rounded-xl bg-[#01272e]/80 border border-white/[0.06] mb-6">
               Are you sure you want to permanently delete{' '}
               <strong className="text-white">"{selectedDoc.title}"</strong> ({selectedDoc.original_filename})?
             </p>
@@ -832,7 +832,7 @@ export default function Documents() {
               <button
                 type="button"
                 onClick={() => setDeleteModalOpen(false)}
-                className="px-4 py-2 rounded-xl text-xs font-medium text-neutral-400 hover:text-white transition"
+                className="px-4 py-2 rounded-xl text-xs font-semibold text-[#EAF4F4]/70 hover:text-white transition"
               >
                 Cancel
               </button>
@@ -840,7 +840,7 @@ export default function Documents() {
                 type="button"
                 onClick={handleDeleteConfirm}
                 disabled={actionLoading}
-                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold bg-red-600 hover:bg-red-500 text-white disabled:opacity-50 transition"
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold bg-red-600 hover:bg-red-500 text-white disabled:opacity-50 transition cursor-pointer"
               >
                 {actionLoading ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
                 <span>{actionLoading ? 'Deleting...' : 'Delete Permanently'}</span>
