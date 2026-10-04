@@ -13,6 +13,7 @@ import {
   AlertCircle,
   X,
   Clock,
+  ShieldCheck,
 } from 'lucide-react';
 import Navbar from '../components/Navbar';
 import { useAuth } from '../context/AuthContext';
@@ -182,32 +183,32 @@ export default function Users() {
   };
 
   return (
-    <div className="min-h-screen bg-neutral-950 text-neutral-100 flex flex-col">
+    <div className="min-h-screen bg-[#01272e] text-[#EAF4F4] flex flex-col font-sans selection:bg-[#03D26F]/30 selection:text-white">
       <Navbar />
 
-      <main className="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 py-8 space-y-6">
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-8 space-y-6">
         {/* Banner Alert if any */}
         {bannerMessage && (
           <div
-            className={`p-3.5 rounded-xl border flex items-center justify-between gap-3 text-xs ${
+            className={`p-4 rounded-2xl border flex items-center justify-between gap-3 text-xs ${
               bannerMessage.type === 'success'
-                ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-300'
-                : 'bg-rose-500/10 border-rose-500/20 text-rose-300'
+                ? 'bg-[#03D26F]/15 border-[#03D26F]/30 text-[#03D26F]'
+                : 'bg-rose-500/15 border-rose-500/30 text-rose-300'
             }`}
           >
             <div className="flex items-center gap-2">
               {bannerMessage.type === 'success' ? (
-                <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+                <CheckCircle2 className="w-4 h-4 text-[#03D26F] shrink-0" />
               ) : (
-                <AlertCircle className="w-4 h-4 text-rose-400 flex-shrink-0" />
+                <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
               )}
-              <span>{bannerMessage.text}</span>
+              <span className="font-medium">{bannerMessage.text}</span>
             </div>
             <button
               onClick={() => setBannerMessage(null)}
-              className="text-neutral-400 hover:text-white transition"
+              className="text-[#EAF4F4]/60 hover:text-white transition cursor-pointer"
             >
-              <X className="w-3.5 h-3.5" />
+              <X className="w-4 h-4" />
             </button>
           </div>
         )}
@@ -216,48 +217,48 @@ export default function Users() {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <div className="flex items-center gap-2">
-              <span className="inline-flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wider text-violet-400 bg-violet-500/10 px-2.5 py-0.5 rounded-full">
-                <Shield className="w-3 h-3" /> Admin Only
+              <span className="inline-flex items-center gap-1 text-[11px] font-mono font-bold uppercase tracking-wider text-[#CEF431] bg-[#CEF431]/15 px-2.5 py-0.5 rounded-full border border-[#CEF431]/25">
+                <Shield className="w-3 h-3 text-[#CEF431]" /> Admin RBAC Directory
               </span>
-              <span className="text-xs text-neutral-500">Internal Company Directory</span>
+              <span className="text-xs text-[#EAF4F4]/60">Internal Enterprise Directory</span>
             </div>
-            <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight mt-1">
+            <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight mt-1.5">
               User Management
             </h1>
-            <p className="text-xs text-neutral-400 mt-0.5">
-              Provision internal staff accounts and manage system role permissions.
+            <p className="text-xs text-[#EAF4F4]/70 mt-0.5">
+              Provision internal staff accounts and manage system role permissions with strict RBAC.
             </p>
           </div>
 
           <div className="flex items-center gap-2">
             <button
               onClick={() => setIsModalOpen(true)}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-violet-600 hover:bg-violet-500 text-white text-xs font-semibold shadow-lg shadow-violet-600/20 transition"
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#03D26F] hover:bg-[#02be63] text-[#161514] text-xs font-bold shadow-lg shadow-[#03D26F]/25 transition cursor-pointer"
             >
-              <UserPlus className="w-4 h-4" />
+              <UserPlus className="w-4 h-4 text-[#161514]" />
               <span>Create Staff User</span>
             </button>
           </div>
         </div>
 
         {/* Controls & Filter Bar */}
-        <div className="bg-neutral-900/40 border border-white/[0.06] rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-3">
-          <div className="relative w-full sm:w-72">
-            <Search className="w-3.5 h-3.5 text-neutral-500 absolute left-3 top-1/2 -translate-y-1/2" />
+        <div className="bg-[#01353e]/60 border border-white/[0.08] rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-sm">
+          <div className="relative w-full sm:w-80">
+            <Search className="w-3.5 h-3.5 text-[#EAF4F4]/40 absolute left-3 top-1/2 -translate-y-1/2" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search by name, email, role..."
-              className="w-full bg-neutral-950/80 border border-white/[0.08] rounded-xl pl-9 pr-3 py-1.5 text-xs text-white placeholder-neutral-500 focus:outline-none focus:border-violet-500/50"
+              className="w-full bg-[#01272e] border border-white/[0.1] rounded-xl pl-9 pr-3.5 py-2 text-xs text-white placeholder-[#EAF4F4]/40 focus:outline-none focus:border-[#03D26F]"
             />
           </div>
 
-          <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+          <div className="flex items-center gap-2.5 w-full sm:w-auto justify-end">
             <select
               value={roleFilter}
               onChange={(e) => setRoleFilter(e.target.value)}
-              className="bg-neutral-950/80 border border-white/[0.08] rounded-xl px-3 py-1.5 text-xs text-neutral-300 focus:outline-none"
+              className="bg-[#01272e] border border-white/[0.1] rounded-xl px-3 py-2 text-xs text-[#EAF4F4] focus:outline-none focus:border-[#03D26F]"
             >
               <option value="">All Roles</option>
               <option value="ADMIN">Admin</option>
@@ -267,7 +268,7 @@ export default function Users() {
             <select
               value={activeFilter}
               onChange={(e) => setActiveFilter(e.target.value)}
-              className="bg-neutral-950/80 border border-white/[0.08] rounded-xl px-3 py-1.5 text-xs text-neutral-300 focus:outline-none"
+              className="bg-[#01272e] border border-white/[0.1] rounded-xl px-3 py-2 text-xs text-[#EAF4F4] focus:outline-none focus:border-[#03D26F]"
             >
               <option value="">All Statuses</option>
               <option value="true">Active Only</option>
@@ -276,29 +277,29 @@ export default function Users() {
 
             <button
               onClick={loadUsers}
-              className="p-1.5 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-neutral-400 hover:text-white transition"
+              className="p-2 rounded-xl bg-[#01272e] hover:bg-[#01353e] border border-white/[0.08] text-[#EAF4F4] transition cursor-pointer"
               title="Refresh list"
             >
-              <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin text-violet-400' : ''}`} />
+              <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin text-[#03D26F]' : 'text-[#EAF4F4]/60'}`} />
             </button>
           </div>
         </div>
 
         {/* Users Table */}
-        <div className="rounded-2xl border border-white/[0.06] bg-neutral-900/40 backdrop-blur-xl overflow-hidden">
+        <div className="rounded-2xl border border-white/[0.08] bg-[#01353e]/50 backdrop-blur-xl overflow-hidden shadow-sm">
           {isLoading && users.length === 0 ? (
-            <div className="p-12 text-center text-xs text-neutral-500 flex items-center justify-center gap-2">
-              <RefreshCw className="w-4 h-4 animate-spin text-violet-400" />
+            <div className="p-12 text-center text-xs text-[#EAF4F4]/60 flex items-center justify-center gap-2">
+              <RefreshCw className="w-4 h-4 animate-spin text-[#03D26F]" />
               <span>Loading user directory...</span>
             </div>
           ) : filteredUsers.length === 0 ? (
-            <div className="p-12 text-center text-xs text-neutral-500">
+            <div className="p-12 text-center text-xs text-[#EAF4F4]/60">
               No matching user accounts found.
             </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs">
-                <thead className="border-b border-white/[0.06] bg-white/[0.02] text-neutral-400 uppercase tracking-wider font-semibold text-[10px]">
+                <thead className="border-b border-white/[0.08] bg-[#01272e]/80 text-[#EAF4F4]/70 uppercase tracking-wider font-semibold text-[10px]">
                   <tr>
                     <th className="py-3 px-4">User</th>
                     <th className="py-3 px-4">Email</th>
@@ -308,48 +309,48 @@ export default function Users() {
                     <th className="py-3 px-4 text-right">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-white/[0.04]">
+                <tbody className="divide-y divide-white/[0.06]">
                   {filteredUsers.map((u) => {
                     const isSelf = u.id === currentUser?.id;
                     const isStaffRole = (u.role || '').toLowerCase() === 'staff' || (u.role || '').toLowerCase() === 'user';
                     const roleUpper = isStaffRole ? 'STAFF' : 'ADMIN';
 
                     return (
-                      <tr key={u.id} className="hover:bg-white/[0.02] transition">
+                      <tr key={u.id} className="hover:bg-white/[0.03] transition">
                         {/* Name + Avatar */}
                         <td className="py-3.5 px-4">
                           <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-violet-600 to-indigo-700 flex items-center justify-center font-bold text-white text-xs flex-shrink-0">
+                            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#03D26F] to-[#014651] flex items-center justify-center font-bold text-white text-xs shrink-0 font-mono">
                               {u.name?.charAt(0)?.toUpperCase() || 'U'}
                             </div>
                             <div>
-                              <div className="font-medium text-white flex items-center gap-1.5">
+                              <div className="font-semibold text-white flex items-center gap-1.5">
                                 <span>{u.name}</span>
                                 {isSelf && (
-                                  <span className="text-[9px] font-semibold text-teal-400 bg-teal-500/10 px-1.5 py-0.2 rounded-full border border-teal-500/20">
+                                  <span className="text-[9px] font-mono font-bold text-[#CEF431] bg-[#CEF431]/15 px-2 py-0.2 rounded-full border border-[#CEF431]/25">
                                     You
                                   </span>
                                 )}
                               </div>
-                              <span className="text-[10px] text-neutral-500 font-mono">ID #{u.id}</span>
+                              <span className="text-[10px] text-[#EAF4F4]/50 font-mono">ID #{u.id}</span>
                             </div>
                           </div>
                         </td>
 
                         {/* Email */}
-                        <td className="py-3.5 px-4 font-mono text-neutral-300">
+                        <td className="py-3.5 px-4 font-mono text-[#EAF4F4]/90">
                           {u.email}
                         </td>
 
                         {/* Role */}
                         <td className="py-3.5 px-4">
                           {roleUpper === 'ADMIN' ? (
-                            <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-violet-500/15 text-violet-300 border border-violet-500/30">
-                              <Shield className="w-3 h-3 text-violet-400" /> ADMIN
+                            <span className="inline-flex items-center gap-1 text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-[#CEF431]/15 text-[#CEF431] border border-[#CEF431]/30">
+                              <Shield className="w-3 h-3 text-[#CEF431]" /> ADMIN
                             </span>
                           ) : (
-                            <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-500/15 text-slate-300 border border-slate-500/30">
-                              <UsersIcon className="w-3 h-3 text-slate-400" /> STAFF
+                            <span className="inline-flex items-center gap-1 text-[10px] font-mono font-semibold px-2 py-0.5 rounded-full bg-[#03D26F]/15 text-[#03D26F] border border-[#03D26F]/30">
+                              <UsersIcon className="w-3 h-3 text-[#03D26F]" /> STAFF
                             </span>
                           )}
                         </td>
@@ -357,34 +358,34 @@ export default function Users() {
                         {/* Status */}
                         <td className="py-3.5 px-4">
                           {u.is_active ? (
-                            <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                            <span className="inline-flex items-center gap-1 text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-[#03D26F]/20 text-[#03D26F] border border-[#03D26F]/40">
                               <UserCheck className="w-3 h-3" /> Active
                             </span>
                           ) : (
-                            <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-rose-500/10 text-rose-400 border border-rose-500/20">
+                            <span className="inline-flex items-center gap-1 text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-300 border border-rose-500/30">
                               <UserX className="w-3 h-3" /> Inactive
                             </span>
                           )}
                         </td>
 
                         {/* Created Date */}
-                        <td className="py-3.5 px-4 text-neutral-400 text-[11px]">
+                        <td className="py-3.5 px-4 text-[#EAF4F4]/60 text-[11px] font-mono">
                           {formatDate(u.created_at)}
                         </td>
 
                         {/* Actions */}
                         <td className="py-3.5 px-4 text-right">
                           {isSelf ? (
-                            <span className="text-[11px] text-neutral-600 italic">Protected</span>
+                            <span className="text-[11px] text-[#EAF4F4]/40 italic">Protected</span>
                           ) : (
                             <button
                               type="button"
                               disabled={actionInProgressId === u.id}
                               onClick={() => handleToggleActive(u)}
-                              className={`px-3 py-1 rounded-lg text-xs font-medium transition disabled:opacity-50 inline-flex items-center gap-1 ${
+                              className={`px-3 py-1 rounded-lg text-xs font-semibold transition disabled:opacity-50 inline-flex items-center gap-1 cursor-pointer ${
                                 u.is_active
-                                  ? 'bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/20'
-                                  : 'bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 border border-emerald-500/20'
+                                  ? 'bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 border border-rose-500/25'
+                                  : 'bg-[#03D26F]/15 hover:bg-[#03D26F]/25 text-[#03D26F] border border-[#03D26F]/30'
                               }`}
                             >
                               {actionInProgressId === u.id ? (
@@ -415,45 +416,45 @@ export default function Users() {
 
       {/* Create User Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-neutral-950/80 backdrop-blur-sm">
-          <div className="max-w-md w-full rounded-2xl bg-neutral-900 border border-white/[0.08] p-6 space-y-4 shadow-2xl">
-            <div className="flex items-center justify-between pb-3 border-b border-white/[0.06]">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm">
+          <div className="max-w-md w-full rounded-3xl bg-[#01353e] border border-white/[0.1] p-6 sm:p-8 space-y-4 shadow-2xl">
+            <div className="flex items-center justify-between pb-3 border-b border-white/[0.08]">
               <div>
                 <h3 className="text-base font-bold text-white flex items-center gap-2">
-                  <UserPlus className="w-4 h-4 text-violet-400" /> Create Internal User
+                  <UserPlus className="w-4 h-4 text-[#03D26F]" /> Create Internal User
                 </h3>
-                <p className="text-xs text-neutral-500 mt-0.5">
+                <p className="text-xs text-[#EAF4F4]/70 mt-0.5">
                   Provision an internal Staff or Administrator account.
                 </p>
               </div>
               <button
                 type="button"
                 onClick={() => setIsModalOpen(false)}
-                className="text-neutral-400 hover:text-white transition"
+                className="text-[#EAF4F4]/60 hover:text-white transition cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
             {formServerError && (
-              <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-300 text-xs flex items-center gap-2">
-                <AlertCircle className="w-4 h-4 text-rose-400 flex-shrink-0" />
+              <div className="p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/25 text-rose-300 text-xs flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
                 <span>{formServerError}</span>
               </div>
             )}
 
-            <form onSubmit={handleCreateSubmit} className="space-y-3.5 text-xs">
+            <form onSubmit={handleCreateSubmit} className="space-y-4 text-xs">
               <div>
-                <label className="block text-neutral-300 font-medium mb-1">Full Name</label>
+                <label className="block text-[#EAF4F4]/80 font-semibold mb-1">Full Name</label>
                 <input
                   type="text"
                   name="name"
                   value={formData.name}
                   onChange={handleInputChange}
                   placeholder="e.g. Priyantha Fernando"
-                  className={`w-full bg-neutral-950 border ${
-                    formErrors.name ? 'border-rose-500' : 'border-white/[0.08]'
-                  } rounded-xl px-3 py-2 text-white focus:outline-none focus:border-violet-500/50`}
+                  className={`w-full bg-[#01272e] border ${
+                    formErrors.name ? 'border-rose-500' : 'border-white/[0.1]'
+                  } rounded-xl px-3.5 py-2 text-white placeholder-[#EAF4F4]/30 focus:outline-none focus:border-[#03D26F]`}
                 />
                 {formErrors.name && (
                   <p className="text-rose-400 text-[11px] mt-1">{formErrors.name}</p>
@@ -461,16 +462,16 @@ export default function Users() {
               </div>
 
               <div>
-                <label className="block text-neutral-300 font-medium mb-1">Company Email</label>
+                <label className="block text-[#EAF4F4]/80 font-semibold mb-1">Company Email</label>
                 <input
                   type="email"
                   name="email"
                   value={formData.email}
                   onChange={handleInputChange}
                   placeholder="e.g. p.fernando@smartsupply.com"
-                  className={`w-full bg-neutral-950 border ${
-                    formErrors.email ? 'border-rose-500' : 'border-white/[0.08]'
-                  } rounded-xl px-3 py-2 text-white focus:outline-none focus:border-violet-500/50`}
+                  className={`w-full bg-[#01272e] border ${
+                    formErrors.email ? 'border-rose-500' : 'border-white/[0.1]'
+                  } rounded-xl px-3.5 py-2 text-white placeholder-[#EAF4F4]/30 focus:outline-none focus:border-[#03D26F]`}
                 />
                 {formErrors.email && (
                   <p className="text-rose-400 text-[11px] mt-1">{formErrors.email}</p>
@@ -478,16 +479,16 @@ export default function Users() {
               </div>
 
               <div>
-                <label className="block text-neutral-300 font-medium mb-1">Temporary Password</label>
+                <label className="block text-[#EAF4F4]/80 font-semibold mb-1">Temporary Password</label>
                 <input
                   type="password"
                   name="password"
                   value={formData.password}
                   onChange={handleInputChange}
                   placeholder="Min 8 characters (e.g. Temporary123!)"
-                  className={`w-full bg-neutral-950 border ${
-                    formErrors.password ? 'border-rose-500' : 'border-white/[0.08]'
-                  } rounded-xl px-3 py-2 text-white focus:outline-none focus:border-violet-500/50`}
+                  className={`w-full bg-[#01272e] border ${
+                    formErrors.password ? 'border-rose-500' : 'border-white/[0.1]'
+                  } rounded-xl px-3.5 py-2 text-white placeholder-[#EAF4F4]/30 focus:outline-none focus:border-[#03D26F]`}
                 />
                 {formErrors.password && (
                   <p className="text-rose-400 text-[11px] mt-1">{formErrors.password}</p>
@@ -495,42 +496,42 @@ export default function Users() {
               </div>
 
               <div>
-                <label className="block text-neutral-300 font-medium mb-1">System Role</label>
+                <label className="block text-[#EAF4F4]/80 font-semibold mb-1">System Role</label>
                 <select
                   name="role"
                   value={formData.role}
                   onChange={handleInputChange}
-                  className="w-full bg-neutral-950 border border-white/[0.08] rounded-xl px-3 py-2 text-white focus:outline-none focus:border-violet-500/50"
+                  className="w-full bg-[#01272e] border border-white/[0.1] rounded-xl px-3.5 py-2 text-white focus:outline-none focus:border-[#03D26F]"
                 >
                   <option value="STAFF">STAFF (Catalog, Inventory & Decision Generation)</option>
                   <option value="ADMIN">ADMIN (Full Privileges & Decision Approval)</option>
                 </select>
-                <p className="text-[10px] text-neutral-500 mt-1">
+                <p className="text-[10px] text-[#EAF4F4]/50 mt-1">
                   STAFF users cannot approve/reject decisions or manage other accounts.
                 </p>
               </div>
 
-              <div className="flex items-center justify-end gap-2 pt-3 border-t border-white/[0.06]">
+              <div className="flex items-center justify-end gap-2 pt-3 border-t border-white/[0.08]">
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-2 rounded-xl text-xs text-neutral-400 hover:text-white transition"
+                  className="px-4 py-2 rounded-xl text-xs text-[#EAF4F4]/70 hover:text-white transition cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="px-4 py-2 rounded-xl bg-violet-600 hover:bg-violet-500 text-white text-xs font-semibold shadow-lg shadow-violet-600/20 transition disabled:opacity-50 flex items-center gap-1.5"
+                  className="px-5 py-2.5 rounded-xl bg-[#03D26F] hover:bg-[#02be63] text-[#161514] text-xs font-bold shadow-lg shadow-[#03D26F]/25 transition disabled:opacity-50 flex items-center gap-1.5 cursor-pointer"
                 >
                   {isSubmitting ? (
                     <>
-                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin text-[#161514]" />
                       <span>Creating...</span>
                     </>
                   ) : (
                     <>
-                      <UserPlus className="w-3.5 h-3.5" />
+                      <UserPlus className="w-3.5 h-3.5 text-[#161514]" />
                       <span>Create Account</span>
                     </>
                   )}
@@ -543,3 +544,4 @@ export default function Users() {
     </div>
   );
 }
+
