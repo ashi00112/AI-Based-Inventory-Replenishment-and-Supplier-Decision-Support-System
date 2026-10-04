@@ -8,8 +8,11 @@ from app.models.base import TimestampMixin
 class UserRole(str, enum.Enum):
     """
     Allowed application roles for users.
+    Internal system permits only ADMIN and STAFF roles.
+    USER is retained as a legacy/compatibility alias for staff.
     """
     ADMIN = "admin"
+    STAFF = "staff"
     USER = "user"
 
 
