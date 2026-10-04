@@ -3,6 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
 from app.database.session import get_db
+from app.dependencies.auth import require_catalog_access
 from app.schemas.product import ProductCreate, ProductResponse, ProductUpdate
 from app.services.product_service import (
     ProductAlreadyExistsError,
@@ -15,7 +16,7 @@ from app.services.product_service import (
     update_product,
 )
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(require_catalog_access)])
 
 
 @router.post(

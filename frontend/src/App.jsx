@@ -6,6 +6,10 @@ import Login from './pages/Login';
 import Products from './pages/Products';
 import Inventory from './pages/Inventory';
 import Transactions from './pages/Transactions';
+import Suppliers from './pages/Suppliers';
+import Documents from './pages/Documents';
+import Decisions from './pages/Decisions';
+import Users from './pages/Users';
 import ProtectedRoute from './components/ProtectedRoute';
 import PublicOnlyRoute from './components/PublicOnlyRoute';
 
@@ -45,13 +49,39 @@ export default function App() {
         }
       />
       <Route
-        path="/register"
+        path="/suppliers"
         element={
-          <PublicOnlyRoute>
-            <Register />
-          </PublicOnlyRoute>
+          <ProtectedRoute>
+            <Suppliers />
+          </ProtectedRoute>
         }
       />
+      <Route
+        path="/documents"
+        element={
+          <ProtectedRoute>
+            <Documents />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/decisions"
+        element={
+          <ProtectedRoute>
+            <Decisions />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/users"
+        element={
+          <ProtectedRoute requiredRole="ADMIN">
+            <Users />
+          </ProtectedRoute>
+        }
+      />
+      {/* Public registration disabled: redirect /register directly to /login */}
+      <Route path="/register" element={<Navigate to="/login" replace />} />
       <Route
         path="/login"
         element={

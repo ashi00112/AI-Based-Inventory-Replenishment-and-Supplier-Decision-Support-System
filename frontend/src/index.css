@@ -5,13 +5,22 @@
 @tailwind utilities;
 
 @layer base {
+  :root {
+    --color-primary: #03D26F; /* Malachite */
+    --color-deep: #014651;    /* Cyprus */
+    --color-surface: #EAF4F4; /* Aqua Haze */
+    --color-accent: #CEF431;  /* Starship */
+    --color-dark: #161514;    /* Cod Gray */
+  }
+
   body {
     @apply bg-neutral-950 text-neutral-100 font-sans antialiased;
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
   }
 
   ::selection {
-    @apply bg-violet-500/30 text-white;
+    background-color: rgba(3, 210, 111, 0.3);
+    color: #ffffff;
   }
 
   /* Custom scrollbar */
@@ -20,13 +29,33 @@
     height: 6px;
   }
   ::-webkit-scrollbar-track {
-    @apply bg-transparent;
+    background: transparent;
   }
   ::-webkit-scrollbar-thumb {
-    @apply bg-neutral-800 rounded-full;
+    background-color: #023841;
+    border-radius: 9999px;
   }
   ::-webkit-scrollbar-thumb:hover {
-    @apply bg-neutral-700;
+    background-color: #025866;
+  }
+}
+
+@keyframes spin-once {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-spin-once {
+  animation: spin-once 1.05s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-spin-once {
+    animation: none !important;
   }
 }
 

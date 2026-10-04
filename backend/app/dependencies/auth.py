@@ -84,3 +84,80 @@ def get_current_user(
         raise _INACTIVE_USER_ERROR
 
     return user
+
+
+def get_optional_user(
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(_bearer_scheme),
+    db: Session = Depends(get_db),
+) -> Optional[User]:
+    """
+    Extracts authenticated user if Bearer token is provided, or None if absent.
+    Raises 401 if credentials are provided but invalid or if user is inactive.
+    """
+    if credentials is None:
+        return None
+    return get_current_user(credentials=credentials, db=db)
+
+
+def require_admin(
+    current_user: User = Depends(get_current_user),
+) -> User:
+    """
+    RBAC dependency requiring ADMIN role.
+    Raises 403 Forbidden if the authenticated user is not an administrator.
+    """
+    role_str = (current_user.role or "").strip().lower()
+    if role_str != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Forbidden: Administrative privileges required.",
+        )
+    return current_user
+
+
+def require_staff_or_admin(
+    current_user: User = Depends(get_current_user),
+) -> User:
+    """
+    RBAC dependency requiring either STAFF or ADMIN role.
+    Raises 403 Forbidden if user role is unrecognized or unauthorized.
+    """
+    role_str = (current_user.role or "").strip().lower()
+    allowed = {"admin", "staff", "user"}
+    if role_str not in allowed:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Forbidden: Staff or Admin role required.",
+        )
+    return current_user
+
+
+def require_catalog_access(
+    current_user: User = Depends(require_staff_or_admin),
+) -> User:
+    """
+    Catalog and supplier access dependency.
+    STAFF and ADMIN have access.
+    Anonymous requests receive 401; unrecognized roles receive 403.
+    """
+    return current_user
+
+
+def require_roles(*allowed_roles: str):
+    """
+    Factory creating a dependency that verifies the user possesses one of the specified roles.
+    """
+    normalized_allowed = {r.strip().lower() for r in allowed_roles}
+    if "staff" in normalized_allowed:
+        normalized_allowed.add("user")
+
+    def _role_checker(current_user: User = Depends(get_current_user)) -> User:
+        user_role = (current_user.role or "").strip().lower()
+        if user_role not in normalized_allowed:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Forbidden: Action requires one of the following roles: {', '.join(allowed_roles)}.",
+            )
+        return current_user
+
+    return _role_checker

@@ -2,8 +2,15 @@ from typing import List
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
+from app.agents.inventory import InventoryMonitoringAgent
 from app.database.session import get_db
-from app.schemas.inventory import InventoryResponse, InventoryUpdate
+from app.dependencies.auth import require_catalog_access
+from app.schemas.inventory import (
+    InventoryMonitoringItem,
+    InventoryMonitoringReport,
+    InventoryResponse,
+    InventoryUpdate,
+)
 from app.services.inventory_service import (
     InventoryNotFoundError,
     InvalidInventoryStateError,
@@ -13,7 +20,8 @@ from app.services.inventory_service import (
     update_inventory,
 )
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(require_catalog_access)])
+monitoring_agent = InventoryMonitoringAgent()
 
 
 @router.get(
@@ -30,6 +38,52 @@ def list_all_inventory(
 ) -> List[InventoryResponse]:
     try:
         return list_inventory(db=db, skip=skip, limit=limit)
+    except InventoryServiceError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(exc),
+        )
+
+
+@router.get(
+    "/monitor",
+    response_model=InventoryMonitoringReport,
+    status_code=status.HTTP_200_OK,
+    summary="Monitor full inventory collection",
+    description="Evaluates all catalog products for stock health (OUT_OF_STOCK, LOW_STOCK, HEALTHY) using InventoryMonitoringAgent.",
+)
+def monitor_all_inventory(
+    skip: int = Query(0, ge=0, description="Pagination offset"),
+    limit: int = Query(100, ge=1, le=500, description="Pagination limit"),
+    db: Session = Depends(get_db),
+) -> InventoryMonitoringReport:
+    try:
+        return monitoring_agent.monitor_inventory(db=db, skip=skip, limit=limit)
+    except InventoryServiceError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(exc),
+        )
+
+
+@router.get(
+    "/monitor/{product_id}",
+    response_model=InventoryMonitoringItem,
+    status_code=status.HTTP_200_OK,
+    summary="Monitor inventory status for a single product",
+    description="Evaluates stock health (OUT_OF_STOCK, LOW_STOCK, HEALTHY) for a single product using InventoryMonitoringAgent.",
+)
+def monitor_product_by_id(
+    product_id: int,
+    db: Session = Depends(get_db),
+) -> InventoryMonitoringItem:
+    try:
+        return monitoring_agent.monitor_product(db=db, product_id=product_id)
+    except InventoryNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(exc),
+        )
     except InventoryServiceError as exc:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

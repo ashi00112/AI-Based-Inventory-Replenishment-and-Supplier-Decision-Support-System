@@ -1,4 +1,5 @@
 import logging
+from decimal import Decimal
 from typing import List, Optional
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
@@ -10,6 +11,7 @@ from app.models.inventory_transaction import (
     InventoryTransactionType,
 )
 from app.models.product import Product
+from app.models.sales_history import SalesHistory
 from app.schemas.inventory_transaction import InventoryTransactionCreate
 
 logger = logging.getLogger(__name__)
@@ -51,12 +53,12 @@ def process_inventory_transaction(
 ) -> InventoryTransaction:
     """
     Atomically processes an inventory transaction:
-    1. Loads product and its inventory record.
-    2. Validates business constraints (available stock for SALE, non-negative for ADJUSTMENT).
-    3. Calculates previous_on_hand and new_on_hand.
-    4. Mutates inventory.on_hand.
-    5. Creates the immutable InventoryTransaction audit record.
-    6. Commits both changes in a single database transaction.
+    1. Product and inventory are loaded.
+    2. Transaction-specific stock rules are validated.
+    3. Inventory on_hand is updated.
+    4. InventoryTransaction audit record is created.
+    5. For SALE transactions only, a SalesHistory record with price snapshot is created.
+    6. Inventory update, InventoryTransaction, and when applicable SalesHistory are committed atomically in one database transaction.
     """
     # 1. Load Product
     product = db.get(Product, tx_in.product_id)
@@ -132,7 +134,24 @@ def process_inventory_transaction(
     )
     db.add(tx_record)
 
-    # 6. Commit atomically
+    # 6. For SALE transactions, record historical sales entry
+    if ttype == InventoryTransactionType.SALE:
+        unit_price = (
+            product.unit_price
+            if isinstance(product.unit_price, Decimal)
+            else Decimal(str(product.unit_price))
+        )
+        total_amount = Decimal(qty) * unit_price
+        sales_record = SalesHistory(
+            product_id=product.id,
+            transaction=tx_record,
+            quantity=qty,
+            unit_price=unit_price,
+            total_amount=total_amount,
+        )
+        db.add(sales_record)
+
+    # 7. Commit atomically
     try:
         db.commit()
     except IntegrityError as exc:

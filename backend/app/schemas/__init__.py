@@ -19,6 +19,35 @@ from app.schemas.inventory_transaction import (
     InventoryTransactionCreate,
     InventoryTransactionResponse,
 )
+from app.schemas.supplier import (
+    SupplierCreate,
+    SupplierUpdate,
+    SupplierResponse,
+    SupplierSummary,
+)
+from app.schemas.product_supplier import (
+    ProductSupplierCreate,
+    ProductSupplierUpdate,
+    ProductSupplierResponse,
+)
+from app.schemas.document import DocumentResponse, DocumentUpdate
+from app.schemas.decision import (
+    ApprovalStatus,
+    DecisionRiskLevel,
+    DecisionRecommendationRequest,
+    DecisionApprovalRequest,
+    SelectedSupplierInfo,
+    InventorySnapshot,
+    DemandSnapshot,
+    SupplierCandidateOption,
+    DecisionRecommendationResponse,
+    DecisionListResponse,
+)
+from app.schemas.user import (
+    AdminUserCreate,
+    AdminUserUpdate,
+    UserListResponse,
+)
 
 __all__ = [
     "HealthResponse",
@@ -36,6 +65,29 @@ __all__ = [
     "InventoryResponse",
     "InventoryTransactionCreate",
     "InventoryTransactionResponse",
+    "SupplierCreate",
+    "SupplierUpdate",
+    "SupplierResponse",
+    "SupplierSummary",
+    "ProductSupplierCreate",
+    "ProductSupplierUpdate",
+    "ProductSupplierResponse",
+    "DocumentResponse",
+    "DocumentUpdate",
+    "ApprovalStatus",
+    "DecisionRiskLevel",
+    "DecisionRecommendationRequest",
+    "DecisionApprovalRequest",
+    "SelectedSupplierInfo",
+    "InventorySnapshot",
+    "DemandSnapshot",
+    "SupplierCandidateOption",
+    "DecisionRecommendationResponse",
+    "DecisionListResponse",
+    "AdminUserCreate",
+    "AdminUserUpdate",
+    "UserListResponse",
 ]
+
 
 

@@ -266,3 +266,62 @@ When you define or modify SQLAlchemy models in `backend/app/models/`:
    alembic upgrade head
    ```
 5. You can inspect the migrated tables immediately in the [Supabase Table Editor](https://supabase.com/dashboard).
+
+---
+
+## Demo Data Seeder (SmartSupply Electronics)
+
+A unified development seeder populates ~180 days of realistic, chronologically consistent inventory ledger and sales history for **SmartSupply Electronics** (Sri Lankan IT & electronics accessories retailer/distributor).
+
+### Seeder Commands
+
+Run from the `backend/` directory with virtual environment activated:
+
+```bash
+# Seed initial demo dataset (idempotent; stops if demo data already exists)
+python scripts/seed_demo_data.py
+
+# Dry-run mode (generates dataset, runs full ledger validation, prints report, rolls back)
+python scripts/seed_demo_data.py --dry-run
+
+# Reset and recreate demo dataset (safely cleans demo records and re-seeds)
+python scripts/seed_demo_data.py --reset-demo
+```
+
+Alternatively, from the repository root:
+```bash
+python -m backend.scripts.seed_demo_data
+python -m backend.scripts.seed_demo_data --dry-run
+python -m backend.scripts.seed_demo_data --reset-demo
+```
+
+### Key Dataset Characteristics
+- **Synthetic Demo Data**: Fictional Sri Lankan market catalog for university demonstration and downstream multi-agent evaluation.
+- **Demo Entity Identification**: All demo products use prefix `DEMO-` (`DEMO-001` to `DEMO-012`) and demo suppliers use prefix `DEMO-SUP-` (`DEMO-SUP-001` to `DEMO-SUP-004`).
+- **Reproducibility**: Uses fixed pseudo-random seed `SEED = 42`.
+- **Safe Reset**: `--reset-demo` strictly deletes records linked to `DEMO-*` products and `DEMO-SUP-*` suppliers in safe foreign-key order, completely preserving non-demo data.
+- **Atomic & Ledger-Consistent**: Every `SALE` event atomically creates linked `InventoryTransaction` and `SalesHistory` records. Ledger formula `initial + RESTOCK + RETURN + pos_ADJ - SALE - neg_ADJ == final on_hand` is strictly validated.
+- **Realistic Commercial Offers**: ProductSupplier entries feature realistic LKR margins, trade-offs between unit cost, MOQ, and lead times across 4 suppliers.
+
+---
+
+## Document Management & PDF Upload
+
+SmartSupply AI provides a secure document management subsystem for company procurement policies, vendor contracts, and supplier SLAs.
+
+### Supported Document Types
+- `procurement_policy`: General company procurement policy (company-wide; supplier is not linked).
+- `inventory_replenishment_policy`: Inventory replenishment threshold rules (company-wide; supplier is not linked).
+- `supplier_sla`: Service Level Agreement (supplier linkage is required).
+- `supplier_contract`: Commercial vendor contract (supplier linkage is required).
+- `supplier_performance_report`: Periodic vendor evaluation report (supplier linkage is required).
+- `other`: Supporting procurement documents (supplier linkage is optional).
+
+### Security & Storage Architecture
+- **Upload Validation**: Strictly accepts files with `.pdf` extension, `application/pdf` MIME type, non-zero file length, and valid `%PDF-` magic byte header.
+- **Upload Size Limit**: Configurable via `MAX_PDF_UPLOAD_SIZE_MB` (default: 10 MB).
+- **Secure File Storage**: Files are saved in `backend/storage/documents/` using random UUID filenames (`<uuid4>.pdf`) as `storage_key`. Original user filenames are preserved as metadata for safe display and downloads.
+- **Git Ignored**: Runtime files in `backend/storage/documents/*` are gitignored to prevent binary file commits while preserving `.gitkeep`.
+- **Integrity**: Every upload computes a SHA-256 digest on-the-fly and verifies path traversal security.
+- **Metadata Only**: Documents currently store physical files and metadata. Text parsing, chunking, vector embeddings, ChromaDB indexing, and RAG/LLM retrieval are not implemented at this stage and will be integrated into the upcoming Supplier Agent phase.
+
