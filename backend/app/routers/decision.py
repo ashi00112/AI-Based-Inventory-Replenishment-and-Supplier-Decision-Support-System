@@ -15,6 +15,7 @@ from sqlalchemy.orm import Session
 from app.agents.decision.agent import DecisionAgent
 from app.core.security import InvalidTokenError, decode_access_token
 from app.database.session import get_db
+from app.dependencies.auth import get_optional_user, require_admin, require_staff_or_admin
 from app.models.decision import ApprovalStatus, DecisionRecommendation
 from app.models.user import User
 from app.schemas.decision import (
@@ -40,24 +41,6 @@ from app.services.decision_service import (
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/decision", tags=["Decision Agent"])
-_bearer_scheme = HTTPBearer(auto_error=False)
-
-
-def get_optional_user(
-    credentials: Optional[HTTPAuthorizationCredentials] = Depends(_bearer_scheme),
-    db: Session = Depends(get_db),
-) -> Optional[User]:
-    """Optional user extractor allowing both authenticated requests and guest requests."""
-    if credentials is None:
-        return None
-    try:
-        payload = decode_access_token(credentials.credentials)
-        user = db.get(User, payload.user_id)
-        if user and user.is_active:
-            return user
-    except Exception:
-        pass
-    return None
 
 
 def _map_model_to_response(model: DecisionRecommendation) -> DecisionRecommendationResponse:
@@ -135,7 +118,7 @@ def _map_model_to_response(model: DecisionRecommendation) -> DecisionRecommendat
 def generate_recommendation(
     request: DecisionRecommendationRequest,
     db: Session = Depends(get_db),
-    current_user: Optional[User] = Depends(get_optional_user),
+    current_user: User = Depends(require_staff_or_admin),
 ) -> DecisionRecommendationResponse:
     """
     Orchestrates the entire multi-agent replenishment pipeline:
@@ -223,6 +206,7 @@ def get_decision_history(
     status_filter: Optional[str] = Query(None, alias="status"),
     product_id: Optional[int] = Query(None),
     db: Session = Depends(get_db),
+    current_user: User = Depends(require_staff_or_admin),
 ) -> DecisionListResponse:
     """Returns paginated decision recommendations with optional approval status or product filtering."""
     items, total = list_decisions(
@@ -245,6 +229,7 @@ def get_decision_history(
 def get_decision_by_id(
     decision_id: int,
     db: Session = Depends(get_db),
+    current_user: User = Depends(require_staff_or_admin),
 ) -> DecisionRecommendationResponse:
     """Retrieves full decision recommendation snapshot and audit history."""
     try:
@@ -264,14 +249,15 @@ def approve_recommendation(
     decision_id: int,
     payload: Optional[DecisionApprovalRequest] = None,
     db: Session = Depends(get_db),
-    current_user: Optional[User] = Depends(get_optional_user),
+    current_user: User = Depends(require_admin),
 ) -> DecisionRecommendationResponse:
     """
     Applies human managerial approval to a pending recommendation.
     Records reviewer ID, notes, and approval timestamp.
+    Only ADMIN role is authorized to approve recommendations.
     """
-    user_id = current_user.id if current_user else None
-    notes = payload.reviewer_notes if payload else "Approved by human procurement manager."
+    user_id = current_user.id
+    notes = payload.reviewer_notes if payload and payload.reviewer_notes else "Approved by human procurement administrator."
 
     try:
         updated = approve_decision(db=db, decision_id=decision_id, user_id=user_id, notes=notes)
@@ -292,13 +278,14 @@ def reject_recommendation(
     decision_id: int,
     payload: Optional[DecisionApprovalRequest] = None,
     db: Session = Depends(get_db),
-    current_user: Optional[User] = Depends(get_optional_user),
+    current_user: User = Depends(require_admin),
 ) -> DecisionRecommendationResponse:
     """
     Records human managerial rejection for a recommendation with justification.
+    Only ADMIN role is authorized to reject recommendations.
     """
-    user_id = current_user.id if current_user else None
-    reason = payload.rejection_reason if payload else "Rejected by human procurement manager."
+    user_id = current_user.id
+    reason = payload.rejection_reason if payload and payload.rejection_reason else "Rejected by human procurement administrator."
 
     try:
         updated = reject_decision(db=db, decision_id=decision_id, user_id=user_id, reason=reason)
