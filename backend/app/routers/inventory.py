@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 
 from app.agents.inventory import InventoryMonitoringAgent
 from app.database.session import get_db
+from app.dependencies.auth import require_catalog_access
 from app.schemas.inventory import (
     InventoryMonitoringItem,
     InventoryMonitoringReport,
@@ -19,7 +20,7 @@ from app.services.inventory_service import (
     update_inventory,
 )
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(require_catalog_access)])
 monitoring_agent = InventoryMonitoringAgent()
 
 

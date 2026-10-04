@@ -3,6 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
 from app.database.session import get_db
+from app.dependencies.auth import require_catalog_access
 from app.schemas.supplier import (
     SupplierCreate,
     SupplierResponse,
@@ -19,7 +20,7 @@ from app.services.supplier_service import (
     update_supplier,
 )
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(require_catalog_access)])
 
 
 @router.post(

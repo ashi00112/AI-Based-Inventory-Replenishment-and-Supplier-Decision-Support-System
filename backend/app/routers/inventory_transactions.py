@@ -8,6 +8,7 @@ from app.schemas.inventory_transaction import (
     InventoryTransactionCreate,
     InventoryTransactionResponse,
 )
+from app.dependencies.auth import require_catalog_access
 from app.services.inventory_transaction_service import (
     InsufficientStockError,
     InvalidTransactionError,
@@ -20,7 +21,7 @@ from app.services.inventory_transaction_service import (
     process_inventory_transaction,
 )
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(require_catalog_access)])
 
 
 @router.post(
