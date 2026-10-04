@@ -10,6 +10,7 @@ from typing import Any, Dict, List, Optional
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from app.models.decision import ApprovalStatus
+from app.schemas.document_processing import DocumentSearchResult
 
 
 class DecisionRiskLevel(str, Enum):
@@ -101,6 +102,10 @@ class SelectedSupplierInfo(BaseModel):
     lead_time_days: int = Field(..., description="Delivery lead time in days")
     estimated_total_cost: float = Field(..., description="unit_cost * recommended_order_quantity")
     selection_reason: str = Field(..., description="Justification for selecting this supplier candidate")
+    evidence: List[DocumentSearchResult] = Field(
+        default_factory=list,
+        description="Grounded document evidence chunks supporting this supplier",
+    )
 
     model_config = ConfigDict(
         from_attributes=True,
@@ -118,6 +123,10 @@ class InventorySnapshot(BaseModel):
     reserved: int
     incoming: int
     available_stock: int
+    effective_inventory: Optional[int] = Field(
+        None,
+        description="Effective inventory position (available_stock + incoming)",
+    )
     reorder_point: int
     status: str
 
@@ -158,6 +167,10 @@ class SupplierCandidateOption(BaseModel):
     estimated_cost: Optional[float] = None
     advantages: List[str] = Field(default_factory=list)
     risks: List[str] = Field(default_factory=list)
+    evidence: List[DocumentSearchResult] = Field(
+        default_factory=list,
+        description="Grounded document evidence chunks supporting candidate assessment",
+    )
 
     model_config = ConfigDict(
         from_attributes=True,

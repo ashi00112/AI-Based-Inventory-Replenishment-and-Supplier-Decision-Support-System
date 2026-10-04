@@ -45,51 +45,61 @@ def calculate_replenishment_shortage(
     available_stock: int,
     reorder_point: int,
     predicted_demand: float,
+    incoming_stock: int = 0,
     safety_stock: Optional[int] = None,
 ) -> Tuple[bool, int, Dict[str, Any]]:
     """
     Deterministic calculation of replenishment requirement and raw target order quantity.
 
-    Mathematical Formula:
-        required_safety_stock = safety_stock if safety_stock is not None else reorder_point
-        net_requirement = (predicted_demand + required_safety_stock) - available_stock
+    Business Rules:
+        - Reorder point is used as SmartSupply's effective safety-stock buffer.
+        - Incoming stock is treated as confirmed pipeline inventory expected to arrive
+          within the active replenishment planning horizon.
+        - Effective inventory position:
+            effective_inventory = available_stock + incoming_stock
+        - Effective safety-stock buffer:
+            effective_safety_stock = reorder_point if safety_stock is None else max(0, int(safety_stock))
+        - Net requirement:
+            net_requirement = (predicted_demand + effective_safety_stock) - effective_inventory
 
     Decision Rules:
         - Replenishment is triggered if:
-            1. available_stock <= reorder_point, OR
-            2. predicted_demand > available_stock, OR
-            3. net_requirement > 0
+            net_requirement > 0 (or effective_inventory < reorder_point when demand is zero)
         - If replenishment is required:
-            recommended_quantity = max(0, ceil(net_requirement))
+            raw_quantity = max(0, ceil(net_requirement))
+            effective_deficit = max(0, safe_reorder_point - effective_inventory)
+            raw_quantity = max(raw_quantity, effective_deficit)
         - If replenishment is NOT required:
-            recommended_quantity = 0
+            raw_quantity = 0
 
     Safeguards:
-        - Enforces recommended_quantity >= 0 always.
+        - Enforces raw_quantity >= 0 always.
         - Clamps floats to integers using ceil to prevent stock deficit.
     """
     # Defensive normalization
     safe_available = max(0, int(available_stock))
+    safe_incoming_stock = max(0, int(incoming_stock))
     safe_reorder_point = max(0, int(reorder_point))
     safe_demand = max(0.0, float(predicted_demand))
 
+    effective_inventory = safe_available + safe_incoming_stock
     effective_safety_stock = safe_reorder_point if safety_stock is None else max(0, int(safety_stock))
 
     # Calculate net shortage requirement
-    net_requirement = (safe_demand + effective_safety_stock) - safe_available
+    net_requirement = (safe_demand + effective_safety_stock) - effective_inventory
 
-    is_low_stock = safe_available <= safe_reorder_point
-    is_demand_exceeding = safe_demand > safe_available
+    # Replenishment triggers when projected effective inventory is insufficient to satisfy
+    # forecast demand + retained reorder-point buffer (or effective inventory falls below ROP buffer).
     has_shortage = net_requirement > 0
-
-    replenishment_required = is_low_stock or is_demand_exceeding or has_shortage
+    is_effective_low_stock = effective_inventory < safe_reorder_point
+    replenishment_required = has_shortage or is_effective_low_stock
 
     if replenishment_required:
-        # Round up to whole units to fully protect against stockouts
+        # Round up to whole units using ceil() to fully protect against fractional stockouts
         raw_quantity = max(0, int(math.ceil(net_requirement)))
-        # If stock is below reorder point but net_requirement calculates small, order at least the deficit to ROP
-        rop_deficit = max(0, safe_reorder_point - safe_available)
-        raw_quantity = max(raw_quantity, rop_deficit)
+        # Guard: ensure we order at least the deficit between effective inventory and the ROP buffer
+        effective_deficit = max(0, safe_reorder_point - effective_inventory)
+        raw_quantity = max(raw_quantity, effective_deficit)
     else:
         raw_quantity = 0
 
@@ -98,12 +108,17 @@ def calculate_replenishment_shortage(
 
     metrics = {
         "available_stock": safe_available,
+        "incoming_stock": safe_incoming_stock,
+        "effective_inventory": effective_inventory,
         "reorder_point": safe_reorder_point,
         "effective_safety_stock": effective_safety_stock,
         "predicted_demand": safe_demand,
-        "net_requirement": round(net_requirement, 2),
-        "is_low_stock": is_low_stock,
-        "is_demand_exceeding": is_demand_exceeding,
+        "net_requirement": round(net_requirement, 4),
+        "raw_quantity": raw_quantity,
+        "is_low_stock": safe_available <= safe_reorder_point,
+        "is_effective_low_stock": is_effective_low_stock,
+        "is_demand_exceeding": safe_demand > effective_inventory,
+        "has_shortage": has_shortage,
     }
 
     return replenishment_required, raw_quantity, metrics
@@ -211,17 +226,43 @@ def generate_deterministic_explanation(
     available_stock: int,
     reorder_point: int,
     predicted_demand: float,
-    warnings: List[str],
+    incoming_stock: int = 0,
+    raw_quantity: Optional[int] = None,
+    net_requirement: Optional[float] = None,
+    warnings: Optional[List[str]] = None,
 ) -> Tuple[str, List[str]]:
     """
     Generates a deterministic, factual explanation and key factor list.
     Ensures explainability is always available even if Grok is offline or unconfigured.
     """
-    factors = [
-        f"Current available inventory: {available_stock} units (Reorder Point: {reorder_point} units).",
-        f"Forecasted demand over horizon: {predicted_demand:.1f} units.",
-        f"Assessed stockout risk level: {risk_level}.",
-    ]
+    safe_incoming = max(0, int(incoming_stock))
+    effective_inventory = available_stock + safe_incoming
+    req_qty = raw_quantity if raw_quantity is not None else quantity
+
+    factors = []
+    if safe_incoming > 0:
+        factors.append(
+            f"Available inventory: {available_stock} units; Confirmed incoming pipeline: {safe_incoming} units "
+            f"(Effective inventory position: {effective_inventory} units)."
+        )
+        factors.append(
+            f"{safe_incoming} incoming units were included as confirmed pipeline inventory. "
+            "The current inventory model does not store expected arrival dates."
+        )
+    else:
+        factors.append(
+            f"Current available inventory: {available_stock} units (Reorder Point: {reorder_point} units)."
+        )
+
+    factors.append(f"Forecasted demand over horizon: {predicted_demand:.1f} units.")
+    factors.append(f"Reorder point is used as SmartSupply's effective safety-stock buffer: {reorder_point} units.")
+
+    if net_requirement is not None and raw_quantity is not None:
+        factors.append(
+            f"Net shortage requirement: {net_requirement:.4f} units (rounded up using ceil() to {raw_quantity} units)."
+        )
+
+    factors.append(f"Assessed stockout risk level: {risk_level}.")
 
     if replenishment_required:
         supplier_info = (
@@ -231,16 +272,33 @@ def generate_deterministic_explanation(
             else f"Recommended procurement order of {quantity} units. (No compliant supplier currently selected)."
         )
 
+        if safe_incoming > 0:
+            inv_summary = (
+                f"Available stock is {available_stock} units and {safe_incoming} units are confirmed incoming, "
+                f"giving an effective inventory position of {effective_inventory} units. "
+            )
+        else:
+            inv_summary = f"Net available inventory ({available_stock} units) "
+
         reasoning = (
-            f"Replenishment is REQUIRED for '{product_name}'. Net available inventory ({available_stock} units) "
-            f"is insufficient to satisfy the forecasted demand of {predicted_demand:.1f} units and maintain safety stock "
-            f"(ROP: {reorder_point} units). {supplier_info}"
+            f"Replenishment is REQUIRED for '{product_name}'. {inv_summary}"
+            f"Forecast demand over the selected horizon is {predicted_demand:.1f} units. "
+            f"SmartSupply retains the product's {reorder_point}-unit reorder point as its effective safety-stock buffer. "
+            f"Therefore approximately {req_qty} units are required before supplier MOQ constraints. {supplier_info}"
         )
     else:
+        if safe_incoming > 0:
+            inv_summary = (
+                f"Effective inventory position of {effective_inventory} units ({available_stock} available + "
+                f"{safe_incoming} confirmed incoming) "
+            )
+        else:
+            inv_summary = f"Net available inventory ({available_stock} units) "
+
         reasoning = (
-            f"Replenishment is NOT REQUIRED for '{product_name}'. Net available inventory ({available_stock} units) "
-            f"comfortably exceeds the safety reorder point ({reorder_point} units) and satisfies forecasted "
-            f"demand ({predicted_demand:.1f} units). No immediate purchase order is necessary."
+            f"Replenishment is NOT REQUIRED for '{product_name}'. {inv_summary}"
+            f"is sufficient to satisfy the forecasted demand of {predicted_demand:.1f} units and maintain the "
+            f"reorder-point buffer ({reorder_point} units). No immediate purchase order is necessary."
         )
 
     return reasoning, factors
