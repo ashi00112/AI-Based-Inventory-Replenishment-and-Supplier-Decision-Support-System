@@ -144,14 +144,14 @@ def seed_agent_data(test_db: Session):
         lead_time_days=5,
         is_active=True,
     )
-    # Wireless Mouse from Digital Distribution: cost=2600, moq=20, lead_time=3
+    # Wireless Mouse from Digital Distribution: cost=2550, moq=20, lead_time=2
     ps2 = ProductSupplier(
         id=2,
         product_id=1,
         supplier_id=10,
-        unit_cost=Decimal("2600.00"),
+        unit_cost=Decimal("2550.00"),
         moq=20,
-        lead_time_days=3,
+        lead_time_days=2,
         is_active=True,
     )
 
@@ -293,11 +293,11 @@ def test_candidate_collection_and_authoritative_facts(test_db: Session, seed_age
 
     # Check Digital Distribution Lanka authoritative facts
     c2 = next(c for c in res.candidate_assessments if c.supplier_id == 10)
-    assert c2.unit_cost == 2600.0
+    assert c2.unit_cost == 2550.0
     assert c2.moq == 20
-    assert c2.lead_time_days == 3
+    assert c2.lead_time_days == 2
     assert c2.meets_moq is True
-    assert c2.estimated_cost == 156000.0
+    assert c2.estimated_cost == 153000.0
 
 
 def test_moq_eligibility_preserves_requested_quantity(test_db: Session, seed_agent_data):

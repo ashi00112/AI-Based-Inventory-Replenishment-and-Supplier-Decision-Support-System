@@ -292,19 +292,28 @@ def rebuild_index(active_documents: List[Document], db: Optional[Any] = None) ->
     return {"documents_indexed": doc_count, "chunks_indexed": chunk_count}
 
 
-def reconcile_index_state(db: Any) -> Dict[str, Any]:
+def reconcile_index_state(db: Any, repair: bool = True) -> Dict[str, Any]:
     """
-    Compares PostgreSQL documents against ChromaDB and safely reconciles lifecycle state.
-    Does NOT rebuild the index.
+    Compares PostgreSQL documents against ChromaDB and filesystem storage,
+    safely reconciling lifecycle state and repairing indices.
 
     Rules:
-    - DB active + vectors exist -> indexed (updates index_status=indexed, last_indexed_at, index_version)
-    - DB active + no vectors -> not_indexed / failed
-    - DB inactive + vectors exist -> remove vectors from Chroma, mark not_indexed
-    - Stale vectors from deleted docs -> purged
+    - Active doc + source PDF missing -> mark failed ('Physical source file missing from storage; requires reupload/restoration'), purge any vectors, count as missing_source.
+    - Active doc + source PDF exists + vectors missing ->
+        if repair: re-extract, chunk, embed, and index it via auto_index_document.
+        if not repair: mark not_indexed ('Vectors missing from vector store; requires re-indexing').
+    - Active doc + source PDF exists + vectors exist + wrong index_version ->
+        if repair: reindex via auto_index_document.
+        if not repair: record version mismatch error.
+    - Active doc + source PDF exists + vectors exist + correct version ->
+        ensure index_status=indexed.
+    - Inactive doc + vectors exist -> purge vectors from Chroma, mark not_indexed.
+    - Stale/orphan vectors from deleted doc IDs -> purge from Chroma.
     """
     from collections import defaultdict
+    from app.services.document_service import get_storage_dir
 
+    storage_dir = get_storage_dir()
     docs = db.query(Document).all()
     collection = _get_collection()
     chroma_results = collection.get()
@@ -321,34 +330,80 @@ def reconcile_index_state(db: Any) -> Dict[str, Any]:
     unindexed_count = 0
     deactivated_cleaned_count = 0
     stale_purged_count = 0
+    missing_source_count = 0
+    reindexed_count = 0
 
     current_version = getattr(settings, "DOCUMENT_INDEX_VERSION", "v1")
 
     for doc in docs:
         vector_ids = chroma_doc_map.get(doc.id, [])
         has_vectors = len(vector_ids) > 0
+        file_path = os.path.join(storage_dir, os.path.basename(doc.storage_key)) if doc.storage_key else ""
+        pdf_exists = bool(file_path and os.path.isfile(file_path))
 
         if doc.is_active:
-            if has_vectors:
-                # Active and vectors exist in Chroma
-                if doc.index_status != IndexStatus.INDEXED.value or not doc.last_indexed_at:
-                    doc.index_status = IndexStatus.INDEXED.value
-                    if not doc.last_indexed_at:
-                        doc.last_indexed_at = datetime.now(timezone.utc)
-                    doc.index_version = current_version
-                    doc.index_error = None
-                    reconciled_count += 1
-                indexed_count += 1
-            else:
-                # Active but missing vectors in Chroma
-                if doc.index_status == IndexStatus.INDEXED.value:
-                    doc.index_status = IndexStatus.NOT_INDEXED.value
-                    doc.index_error = "Vectors missing from vector store"
-                    reconciled_count += 1
-                elif doc.index_status not in [IndexStatus.FAILED.value, IndexStatus.NOT_INDEXED.value]:
-                    doc.index_status = IndexStatus.NOT_INDEXED.value
+            if not pdf_exists:
+                # Active document but local PDF source file is missing from disk
+                missing_source_count += 1
+                if has_vectors:
+                    try:
+                        collection.delete(ids=vector_ids)
+                        deactivated_cleaned_count += len(vector_ids)
+                    except Exception as exc:
+                        logger.warning("Failed to clean vectors for missing file doc id=%d: %s", doc.id, sanitize_error_message(exc))
+
+                expected_err = "Physical source file missing from storage; requires reupload/restoration"
+                if doc.index_status != IndexStatus.FAILED.value or doc.index_error != expected_err:
+                    doc.index_status = IndexStatus.FAILED.value
+                    doc.index_error = expected_err
                     reconciled_count += 1
                 unindexed_count += 1
+
+            elif not has_vectors:
+                # Active document, source PDF available, but vectors missing
+                if repair:
+                    ok = auto_index_document(db=db, document_id=doc.id)
+                    if ok:
+                        reindexed_count += 1
+                        indexed_count += 1
+                        reconciled_count += 1
+                    else:
+                        unindexed_count += 1
+                        reconciled_count += 1
+                else:
+                    if doc.index_status != IndexStatus.NOT_INDEXED.value:
+                        doc.index_status = IndexStatus.NOT_INDEXED.value
+                        doc.index_error = "Vectors missing from vector store; requires re-indexing"
+                        reconciled_count += 1
+                    unindexed_count += 1
+
+            else:
+                # Active document, source PDF available, vectors present in Chroma
+                wrong_version = (doc.index_version != current_version)
+                if wrong_version:
+                    if repair:
+                        ok = auto_index_document(db=db, document_id=doc.id)
+                        if ok:
+                            reindexed_count += 1
+                            indexed_count += 1
+                            reconciled_count += 1
+                        else:
+                            unindexed_count += 1
+                            reconciled_count += 1
+                    else:
+                        doc.index_error = f"Index version mismatch: expected {current_version}, got {doc.index_version}"
+                        reconciled_count += 1
+                        indexed_count += 1
+                else:
+                    if doc.index_status != IndexStatus.INDEXED.value or not doc.last_indexed_at:
+                        doc.index_status = IndexStatus.INDEXED.value
+                        if not doc.last_indexed_at:
+                            doc.last_indexed_at = datetime.now(timezone.utc)
+                        doc.index_version = current_version
+                        doc.index_error = None
+                        reconciled_count += 1
+                    indexed_count += 1
+
         else:
             # Inactive document
             if has_vectors:
@@ -379,8 +434,8 @@ def reconcile_index_state(db: Any) -> Dict[str, Any]:
     db.commit()
 
     logger.info(
-        "Reconciliation completed: operation=reconcile_index_state, total_checked=%d, reconciled=%d, active_indexed=%d, active_unindexed=%d, inactive_cleaned=%d, stale_purged=%d",
-        len(docs), reconciled_count, indexed_count, unindexed_count, deactivated_cleaned_count, stale_purged_count
+        "Reconciliation completed: operation=reconcile_index_state, total_checked=%d, reconciled=%d, active_indexed=%d, active_unindexed=%d, inactive_cleaned=%d, stale_purged=%d, missing_source=%d, reindexed=%d",
+        len(docs), reconciled_count, indexed_count, unindexed_count, deactivated_cleaned_count, stale_purged_count, missing_source_count, reindexed_count
     )
 
     return {
@@ -390,6 +445,8 @@ def reconcile_index_state(db: Any) -> Dict[str, Any]:
         "active_unindexed": unindexed_count,
         "inactive_vectors_removed": deactivated_cleaned_count,
         "stale_vectors_purged": stale_purged_count,
+        "missing_source_count": missing_source_count,
+        "reindexed_count": reindexed_count,
     }
 
 
@@ -399,30 +456,38 @@ def check_document_ir_health(db: Any) -> Dict[str, Any]:
     - PostgreSQL connectivity & document counts
     - ChromaDB availability & vector count
     - Embedding provider availability
+    - Source PDF filesystem availability
     """
     from sqlalchemy import select, func, text
+    from app.services.document_service import get_storage_dir
 
     postgres_connected = False
     active_count = 0
     indexed_count = 0
     failed_count = 0
+    missing_source_count = 0
+    not_indexed_count = 0
+    current_version = getattr(settings, "DOCUMENT_INDEX_VERSION", "v1")
 
     try:
         db.execute(text("SELECT 1"))
         postgres_connected = True
-        active_count = db.scalar(select(func.count()).select_from(Document).where(Document.is_active == True)) or 0
-        indexed_count = db.scalar(
-            select(func.count()).select_from(Document).where(
-                Document.is_active == True,
-                Document.index_status == IndexStatus.INDEXED.value
-            )
-        ) or 0
-        failed_count = db.scalar(
-            select(func.count()).select_from(Document).where(
-                Document.is_active == True,
-                Document.index_status == IndexStatus.FAILED.value
-            )
-        ) or 0
+        active_docs = db.query(Document).filter(Document.is_active == True).all()
+        active_count = len(active_docs)
+        indexed_count = sum(1 for d in active_docs if d.index_status == IndexStatus.INDEXED.value)
+        failed_count = sum(1 for d in active_docs if d.index_status == IndexStatus.FAILED.value)
+        not_indexed_count = sum(
+            1 for d in active_docs if d.index_status in [IndexStatus.NOT_INDEXED.value, IndexStatus.PENDING.value, IndexStatus.INDEXING.value]
+        )
+
+        storage_dir = get_storage_dir()
+        for doc in active_docs:
+            if not doc.storage_key:
+                missing_source_count += 1
+            else:
+                f_path = os.path.join(storage_dir, os.path.basename(doc.storage_key))
+                if not os.path.isfile(f_path):
+                    missing_source_count += 1
     except Exception as db_exc:
         postgres_connected = False
         logger.error("PostgreSQL health probe failed: %s", sanitize_error_message(db_exc))
@@ -446,21 +511,32 @@ def check_document_ir_health(db: Any) -> Dict[str, Any]:
         logger.error("Embedding provider health probe failed: %s", sanitize_error_message(emb_exc))
 
     # Overall status assessment
-    if postgres_connected and chroma_available and embedding_available:
-        if failed_count > 0:
+    if not postgres_connected:
+        status_val = "unhealthy"
+        details = "Database connection offline."
+    elif not chroma_available or not embedding_available:
+        status_val = "degraded"
+        details = "Vector storage or embedding provider unavailable; structured operations operational."
+    elif active_count > 0 and vector_count == 0:
+        status_val = "degraded"
+        details = f"{active_count} active document(s) in database but vector store has 0 vectors; reconciliation required."
+    elif missing_source_count > 0:
+        status_val = "degraded"
+        details = f"{missing_source_count} active document(s) missing physical source file in storage."
+    elif failed_count > 0:
+        status_val = "degraded"
+        details = f"{failed_count} active document(s) in failed index state."
+    elif not_indexed_count > 0 or indexed_count < active_count:
+        status_val = "degraded"
+        details = f"{active_count - indexed_count} active document(s) not yet indexed."
+    else:
+        stale_versions = sum(1 for d in active_docs if d.index_version != current_version)
+        if stale_versions > 0:
             status_val = "degraded"
-            details = f"{failed_count} document(s) in failed index state."
+            details = f"{stale_versions} document(s) have stale index version (expected {current_version})."
         else:
             status_val = "healthy"
             details = "All Document IR services and models operational."
-    elif postgres_connected and (not chroma_available or not embedding_available):
-        status_val = "degraded"
-        details = "Vector storage or embedding provider unavailable; structured operations operational."
-    else:
-        status_val = "unhealthy"
-        details = "Database connection offline."
-
-    current_version = getattr(settings, "DOCUMENT_INDEX_VERSION", "v1")
 
     return {
         "status": status_val,
@@ -470,6 +546,7 @@ def check_document_ir_health(db: Any) -> Dict[str, Any]:
         "active_document_count": active_count,
         "indexed_document_count": indexed_count,
         "failed_document_count": failed_count,
+        "missing_source_count": missing_source_count,
         "vector_count": vector_count,
         "index_version": current_version,
         "details": details,

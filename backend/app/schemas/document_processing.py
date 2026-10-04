@@ -4,7 +4,7 @@ Pydantic schemas for Document Text Extraction and Chunking.
 
 from datetime import datetime
 from typing import Any, List, Optional
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
 class PageExtractionResult(BaseModel):
@@ -83,20 +83,36 @@ class DocumentSearchResult(BaseModel):
     """
     Single retrieved chunk result with similarity distance and provenance.
     """
-    rank: int
-    chunk_id: str
+    rank: Optional[int] = None
+    chunk_id: Optional[str] = None
     document_id: int
     document_title: str
-    document_type: str
+    title: Optional[str] = None
+    document_type: Optional[str] = None
     supplier_id: Optional[int] = None
-    page_number: int
-    chunk_index: int
+    page_number: int = Field(1, description="1-based source page number")
+    chunk_index: int = Field(0, description="Sequential 0-based chunk index")
     text: str
-    distance: float
+    distance: float = 0.0
     source_type: str = "document_ir"
     authority: str = "policy_or_sla"
 
-    model_config = ConfigDict(from_attributes=True)
+    model_config = ConfigDict(from_attributes=True, populate_by_name=True)
+
+    @model_validator(mode="before")
+    @classmethod
+    def sync_titles(cls, data: Any) -> Any:
+        if isinstance(data, dict):
+            t = data.get("document_title") or data.get("title") or "Untitled Document"
+            data.setdefault("document_title", t)
+            data.setdefault("title", t)
+        return data
+
+    def __getitem__(self, item: str) -> Any:
+        return getattr(self, item)
+
+    def get(self, item: str, default: Any = None) -> Any:
+        return getattr(self, item, default)
 
 
 class ReindexResponse(BaseModel):
@@ -135,6 +151,8 @@ class ReconcileIndexResponse(BaseModel):
     active_unindexed: int
     inactive_vectors_removed: int
     stale_vectors_purged: int
+    missing_source_count: int = 0
+    reindexed_count: int = 0
 
     model_config = ConfigDict(from_attributes=True)
 

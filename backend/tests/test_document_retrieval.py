@@ -634,8 +634,9 @@ def test_reconciliation_repairs_lifecycle_states(test_db: Session):
         ]
     }
 
-    with patch("app.services.chroma_service._get_collection", return_value=mock_collection):
-        summary = reconcile_index_state(test_db)
+    with patch("app.services.chroma_service._get_collection", return_value=mock_collection), \
+         patch("os.path.isfile", return_value=True):
+        summary = reconcile_index_state(test_db, repair=False)
 
         test_db.refresh(d1)
         test_db.refresh(d2)
@@ -671,7 +672,8 @@ def test_document_ir_health_endpoint_healthy(client: TestClient, test_db: Sessio
     mock_collection.count.return_value = 8
 
     with patch("app.services.chroma_service._get_collection", return_value=mock_collection), \
-         patch("app.services.embedding_service.EmbeddingProvider.embed_texts", return_value=[[0.1] * 384]):
+         patch("app.services.embedding_service.EmbeddingProvider.embed_texts", return_value=[[0.1] * 384]), \
+         patch("os.path.isfile", return_value=True):
         response = client.get("/api/v1/health/document-ir")
         assert response.status_code == status.HTTP_200_OK
         data = response.json()

@@ -100,6 +100,11 @@ def _map_model_to_response(model: DecisionRecommendation) -> DecisionRecommendat
             except Exception:
                 pass
 
+    if selected_sup and not selected_sup.evidence:
+        matching = next((s for s in sup_options if s.supplier_id == selected_sup.supplier_id), None)
+        if matching and matching.evidence:
+            selected_sup.evidence = matching.evidence
+
     return DecisionRecommendationResponse(
         id=model.id,
         product_id=model.product_id,

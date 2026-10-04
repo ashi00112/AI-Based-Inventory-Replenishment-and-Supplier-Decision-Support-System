@@ -68,10 +68,11 @@ def index_document_endpoint(
     description="Synchronizes PostgreSQL index lifecycle states with actual Chroma vector store contents without rebuilding.",
 )
 def reconcile_index_endpoint(
+    repair: bool = Query(True, description="Whether to reindex missing or stale-version documents whose source PDF exists"),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    return reconcile_index_state(db=db)
+    return reconcile_index_state(db=db, repair=repair)
 
 @router.post(
     "/reindex",

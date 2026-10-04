@@ -42,6 +42,7 @@ from app.schemas.decision import (
     SelectedSupplierInfo,
     SupplierCandidateOption,
 )
+from app.schemas.document_processing import DocumentSearchResult
 from app.schemas.inventory import InventoryMonitoringItem
 from app.schemas.supplier_agent import SupplierAgentRequest
 from app.services.decision_service import (
@@ -67,10 +68,10 @@ CRITICAL RESPONSIBLE AI DIRECTIVES & OPERATIONAL BOUNDARIES:
 1. STRICT CONTEXT GROUNDING: You must ONLY use the supplied factual context (Inventory, Demand, Supplier, and Policy).
 2. NEVER HALLUCINATE: Do NOT invent, assume, or fabricate inventory balances, sales demand, supplier names, prices, or company policies.
 3. IMMUTABLE DETERMINISTIC CALCULATIONS: You MUST NOT alter, override, or recalculate the numerical values (order quantity, unit costs, stock levels, dates) determined by the deterministic backend logic. All operational numbers provided in CALCULATED DECISION are final and authoritative.
-4. POLICY COMPLIANCE: Mandatory corporate procurement and inventory policies cannot be bypassed or overridden.
+4. POLICY COMPLIANCE & TERMINOLOGY: Mandatory corporate procurement and inventory policies cannot be bypassed or overridden. Reorder point is used as SmartSupply's effective safety-stock buffer (not statistically calculated).
 5. ADVISORY NATURE: You are a decision-support advisory system assisting human procurement managers. You do NOT have autonomous purchasing authority. Recommendations require human review.
-6. EXPLAINABILITY: Provide clear, concise, professional business reasoning explaining why replenishment is or is not required, and why the designated supplier was selected.
-7. MISSING DATA TRANSPARENCY: If certain information was unavailable, explicitly acknowledge the caveat without speculation.
+6. EXPLAINABILITY: Provide clear, concise, professional business reasoning explaining why replenishment is or is not required, and why the designated supplier was selected. Reference available stock, confirmed incoming pipeline inventory, effective inventory, forecast demand, and the retained reorder-point buffer.
+7. MISSING DATA TRANSPARENCY: If certain information was unavailable, explicitly acknowledge the caveat without speculation. When incoming stock is present, note that it is treated as confirmed pipeline inventory expected within the replenishment planning horizon as the current inventory model does not store expected arrival dates.
 
 OUTPUT FORMAT:
 You MUST respond with valid JSON strictly conforming to this schema:
@@ -206,6 +207,12 @@ class DecisionAgent(BaseAgent):
             reorder_point = product.reorder_point or 0
             inv_status = "out_of_stock"
 
+        if incoming > 0:
+            warnings.append(
+                f"{incoming} incoming units were included as confirmed pipeline inventory. "
+                "The current inventory model does not store expected arrival dates."
+            )
+
         inventory_snapshot = InventorySnapshot(
             product_id=product.id,
             product_name=product.name,
@@ -214,6 +221,7 @@ class DecisionAgent(BaseAgent):
             reserved=reserved,
             incoming=incoming,
             available_stock=available_stock,
+            effective_inventory=available_stock + incoming,
             reorder_point=reorder_point,
             status=inv_status,
         )
@@ -274,6 +282,7 @@ class DecisionAgent(BaseAgent):
             available_stock=available_stock,
             reorder_point=reorder_point,
             predicted_demand=predicted_demand,
+            incoming_stock=incoming,
         )
 
         # =========================================================================
@@ -314,6 +323,10 @@ class DecisionAgent(BaseAgent):
                     estimated_cost=c.estimated_cost,
                     advantages=c.advantages,
                     risks=c.risks,
+                    evidence=[
+                        DocumentSearchResult.model_validate(ev) if isinstance(ev, dict) else ev
+                        for ev in (c.evidence or [])
+                    ],
                 ))
         except Exception as exc:
             logger.warning("Supplier procurement agent call failed: %s", exc)
@@ -378,6 +391,10 @@ class DecisionAgent(BaseAgent):
                 lead_time_days=chosen_candidate["lead_time_days"],
                 estimated_total_cost=round(est_total, 2),
                 selection_reason=selection_reason,
+                evidence=[
+                    DocumentSearchResult.model_validate(ev) if isinstance(ev, dict) else ev
+                    for ev in (chosen_candidate.get("evidence") or [])
+                ],
             )
 
         # Composite risk level
@@ -391,7 +408,10 @@ class DecisionAgent(BaseAgent):
 
         # Default policy reference if none found
         if not policy_refs:
-            policy_refs.append("Standard Corporate Inventory & Procurement Policy (Safety Stock = ROP)")
+            policy_refs.append(
+                "Standard Corporate Inventory & Procurement Policy "
+                "(Reorder Point is used as SmartSupply's effective safety-stock buffer)"
+            )
 
         # =========================================================================
         # 7. GROK LLM SYNTHESIS & EXPLAINABILITY (WITH SAFEGUARDED FALLBACK)
@@ -399,7 +419,9 @@ class DecisionAgent(BaseAgent):
         reasoning, factors, confidence = self._synthesize_explanation_with_grok(
             product=product,
             replenishment_required=replenishment_required,
+            raw_quantity=raw_quantity,
             final_quantity=final_quantity,
+            net_requirement=shortage_metrics.get("net_requirement"),
             selected_supplier=chosen_candidate,
             risk_level=overall_risk_level,
             inventory_snapshot=inventory_snapshot,
@@ -434,7 +456,9 @@ class DecisionAgent(BaseAgent):
         self,
         product: Product,
         replenishment_required: bool,
+        raw_quantity: int,
         final_quantity: int,
+        net_requirement: Optional[float],
         selected_supplier: Optional[Dict[str, Any]],
         risk_level: str,
         inventory_snapshot: InventorySnapshot,
@@ -449,6 +473,7 @@ class DecisionAgent(BaseAgent):
         Falls back to deterministic explanation if Grok is offline, times out, or fails.
         """
         provider = self._get_provider()
+        effective_inventory = inventory_snapshot.available_stock + inventory_snapshot.incoming
 
         # Build delimited, untrusted-safe structured context prompt
         user_prompt_data = {
@@ -462,7 +487,9 @@ class DecisionAgent(BaseAgent):
                 "on_hand": inventory_snapshot.on_hand,
                 "reserved": inventory_snapshot.reserved,
                 "incoming": inventory_snapshot.incoming,
+                "effective_inventory": effective_inventory,
                 "reorder_point": inventory_snapshot.reorder_point,
+                "effective_safety_stock_buffer": inventory_snapshot.reorder_point,
                 "health_status": inventory_snapshot.status,
             },
             "demand_and_risk_context": {
@@ -486,6 +513,9 @@ class DecisionAgent(BaseAgent):
             "policy_context": policy_refs,
             "calculated_deterministic_decision": {
                 "replenishment_required": replenishment_required,
+                "effective_inventory": effective_inventory,
+                "net_requirement": round(net_requirement, 4) if net_requirement is not None else None,
+                "raw_order_quantity": raw_quantity,
                 "authoritative_order_quantity": final_quantity,
                 "selected_supplier": selected_supplier.get("supplier_name") if selected_supplier else "None",
                 "calculated_risk_level": risk_level,
@@ -532,6 +562,9 @@ class DecisionAgent(BaseAgent):
             available_stock=inventory_snapshot.available_stock,
             reorder_point=inventory_snapshot.reorder_point,
             predicted_demand=demand_snapshot.total_forecasted_demand,
+            incoming_stock=inventory_snapshot.incoming,
+            raw_quantity=raw_quantity,
+            net_requirement=net_requirement,
             warnings=warnings,
         )
 

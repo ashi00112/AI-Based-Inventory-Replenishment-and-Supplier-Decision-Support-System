@@ -252,13 +252,15 @@ class SupplierProcurementAgent:
                 doc_id = c.get("document_id")
                 if doc_id:
                     valid_doc_ids.add(doc_id)
+                doc_title = c.get("document_title") or c.get("title") or "Untitled Document"
                 cleaned_chunks.append({
                     "document_id": doc_id,
-                    "title": c.get("document_title"),
+                    "document_title": doc_title,
+                    "title": doc_title,
                     "document_type": c.get("document_type"),
                     "supplier_id": s_id,
-                    "page_number": c.get("page_number"),
-                    "chunk_index": c.get("chunk_index"),
+                    "page_number": c.get("page_number", 1),
+                    "chunk_index": c.get("chunk_index", 0),
                     "text": c.get("text", "")[:400],  # Bounded excerpt length
                     "distance": round(float(c.get("distance", 0.0)), 4),
                     "source_type": "document_ir",
@@ -277,13 +279,15 @@ class SupplierProcurementAgent:
             doc_id = pc.get("document_id")
             if doc_id:
                 valid_doc_ids.add(doc_id)
+            doc_title = pc.get("document_title") or pc.get("title") or "Untitled Document"
             all_retrieved_evidence.append({
                 "document_id": doc_id,
-                "title": pc.get("document_title"),
+                "document_title": doc_title,
+                "title": doc_title,
                 "document_type": pc.get("document_type"),
                 "supplier_id": None,
-                "page_number": pc.get("page_number"),
-                "chunk_index": pc.get("chunk_index"),
+                "page_number": pc.get("page_number", 1),
+                "chunk_index": pc.get("chunk_index", 0),
                 "text": pc.get("text", "")[:400],
                 "distance": round(float(pc.get("distance", 0.0)), 4),
                 "source_type": "document_ir",

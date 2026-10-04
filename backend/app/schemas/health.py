@@ -20,6 +20,7 @@ class DocumentIRHealthResponse(BaseModel):
     active_document_count: int = Field(..., description="Number of active documents in PostgreSQL")
     indexed_document_count: int = Field(..., description="Number of documents verified as indexed")
     failed_document_count: int = Field(..., description="Number of documents with failed index status")
+    missing_source_count: int = Field(0, description="Number of active documents whose source PDF is missing from storage")
     vector_count: int = Field(..., description="Total vector count in ChromaDB collection")
     index_version: str = Field(..., description="Active index configuration version")
     details: Optional[str] = Field(None, description="Diagnostic summary without sensitive paths or secrets")

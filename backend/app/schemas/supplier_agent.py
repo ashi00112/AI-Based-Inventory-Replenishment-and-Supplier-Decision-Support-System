@@ -6,6 +6,8 @@ Defines strict input and output contracts for supplier assessment and Member 4 h
 from typing import Any, Dict, List, Optional
 from pydantic import BaseModel, Field, field_validator
 
+from app.schemas.document_processing import DocumentSearchResult
+
 
 class SupplierAgentRequest(BaseModel):
     """Input request contract for the Supplier / Procurement Agent."""
@@ -47,7 +49,7 @@ class CandidateAssessment(BaseModel):
     estimated_cost: Optional[float] = Field(None, description="Estimated total cost (unit_cost * requested_quantity)")
     advantages: List[str] = Field(default_factory=list, description="Specific trade-off advantages grounded in facts/policy")
     risks: List[str] = Field(default_factory=list, description="Specific trade-off risks or SLA considerations")
-    evidence: List[Dict[str, Any]] = Field(default_factory=list, description="Grounded document evidence chunks supporting assessment")
+    evidence: List[DocumentSearchResult] = Field(default_factory=list, description="Grounded document evidence chunks supporting assessment")
 
 
 class AdvisorySupplier(BaseModel):
