@@ -107,6 +107,8 @@ def client(test_db: Session, mock_admin: User, tmp_path, monkeypatch):
     with TestClient(app) as test_client:
         yield test_client
 
+    app.dependency_overrides.clear()
+
 
 # =============================================================================
 # 1. PostgreSQL indexed + Chroma empty -> health = degraded

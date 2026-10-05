@@ -653,7 +653,9 @@ export default function Decisions() {
                     <div className="p-2.5 rounded-lg bg-[#01353e]/40 border border-white/[0.06]">
                       <span className="text-[#EAF4F4]/60 text-[10px] block">BUFFER BREACH</span>
                       <span className="text-white font-bold text-sm block mt-0.5">
-                        {currentDecision.detected_condition.days_until_buffer_breach !== null && currentDecision.detected_condition.days_until_buffer_breach !== undefined
+                        {currentDecision.detected_condition.days_until_buffer_breach === 0 || currentDecision.detected_condition.days_until_unsafe === 0
+                          ? 'BREACHED NOW'
+                          : currentDecision.detected_condition.days_until_buffer_breach !== null && currentDecision.detected_condition.days_until_buffer_breach !== undefined
                           ? `${currentDecision.detected_condition.days_until_buffer_breach} days`
                           : currentDecision.detected_condition.days_until_unsafe !== null
                           ? `${currentDecision.detected_condition.days_until_unsafe} days`

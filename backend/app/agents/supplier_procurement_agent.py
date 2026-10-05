@@ -57,6 +57,7 @@ CRITICAL INSTRUCTIONS & SECURITY CONSTRAINTS:
 3. NO FINAL REORDER DECISIONS: You do NOT decide whether to replenish inventory. That is reserved for Member 4 (Decision Agent).
 4. NO ORDER QUANTITY MODIFICATIONS: You must evaluate the caller's requested_quantity as-is. Do NOT adjust the quantity to meet an MOQ.
 5. ADVISORY ONLY: Your recommendation is strictly an advisory supplier preference based on commercial terms, SLA performance, and policies.
+6. NO FALSE MISSING-EVIDENCE CLAIMS: Never claim that SLA or performance documentation is missing when grounded supplier evidence has been supplied for that candidate in the document evidence.
 
 OUTPUT FORMAT:
 You MUST respond with valid JSON strictly conforming to this structure:
@@ -383,7 +384,27 @@ class SupplierProcurementAgent:
 
         policy_constraints = [str(p) for p in llm_response_json.get("policy_constraints", []) if isinstance(p, str)]
         raw_warnings = [str(w) for w in llm_response_json.get("warnings", []) if isinstance(w, str)]
-        warnings.extend(raw_warnings)
+        filtered_warnings = []
+        for w in raw_warnings:
+            w_lower = w.lower()
+            is_missing_doc = any(k in w_lower for k in ["lack", "missing", "insufficient", "no sla", "without sla", "no performance", "no documentation"]) and any(k in w_lower for k in ["sla", "performance", "documentation", "evidence", "document"])
+            if is_missing_doc:
+                suppress = False
+                for cand in raw_candidates:
+                    s_id = cand["supplier_id"]
+                    s_name = cand["supplier_name"].lower()
+                    has_ev = len(evidence_by_supplier.get(s_id, [])) > 0
+                    if has_ev and (str(s_id) in w or f"supplier {s_id}" in w_lower or s_name in w_lower):
+                        suppress = True
+                        break
+                if not suppress and any(len(evidence_by_supplier.get(c["supplier_id"], [])) > 0 for c in raw_candidates):
+                    if advisory_supplier and len(evidence_by_supplier.get(advisory_supplier.supplier_id, [])) > 0:
+                        if any(term in w_lower for term in ["advisory", "recommended", "selected", "supplier"]):
+                            suppress = True
+                if suppress:
+                    continue
+            filtered_warnings.append(w)
+        warnings.extend(filtered_warnings)
 
         duration_ms = int((time.perf_counter() - start_time) * 1000)
         logger.info(

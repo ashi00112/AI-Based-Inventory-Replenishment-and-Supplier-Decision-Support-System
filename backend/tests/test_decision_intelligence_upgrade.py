@@ -91,19 +91,86 @@ def test_timing_immediate_unsafe():
 
 
 def test_timing_future_unsafe_and_stockout():
-    """Correctly simulates daily inventory depletion trajectory."""
+    """Correctly simulates daily inventory depletion trajectory using available stock."""
     # Available = 40, Incoming = 40, ROP = 30, daily demand = 10
-    # Physical stock: Day 1: 30, Day 2: 20, Day 3: 10, Day 4: 0 <= 0 -> stockout day 4
-    # Effective stock: Day 1: 70 ... Day 5: 30, Day 6: 20 < 30 -> unsafe day 6
-    # Earliest critical deadline (stockout 4 <= buffer breach 6) governs required delivery window.
+    # Available stock trajectory: Day 1: 30 <= 30 -> buffer breach day 1; Day 4: 0 <= 0 -> stockout day 4
     daily = [{"forecasted_quantity": 10.0}] * 14
     result = derive_delivery_window_and_timing(
         available_stock=40, incoming_stock=40, reorder_point=30,
         daily_forecasts=daily, forecast_horizon_days=14
     )
-    assert result["days_until_unsafe"] == 6
+    assert result["days_until_unsafe"] == 1
     assert result["days_until_stockout"] == 4
-    assert result["required_delivery_window_days"] == 4
+    assert result["required_delivery_window_days"] == 1
+
+
+def test_timing_available_below_rop_breached_now():
+    """1. available=18, ROP=20 -> buffer breach = 0, stockout and delivery window preserved."""
+    daily = [{"forecasted_quantity": 9.0}] * 14
+    result = derive_delivery_window_and_timing(
+        available_stock=18, incoming_stock=40, reorder_point=20,
+        daily_forecasts=daily, forecast_horizon_days=14
+    )
+    assert result["days_until_buffer_breach"] == 0
+    assert result["days_until_unsafe"] == 0
+    # Day 1: 18 - 9 = 9, Day 2: 9 - 9 = 0 (stockout on day 2)
+    assert result["days_until_stockout"] == 2
+    # Buffer breach = 0 does NOT force required window to 0; stockout at 2 governs window
+    assert result["required_delivery_window_days"] == 2
+
+
+def test_timing_incoming_does_not_delay_buffer_breach():
+    """2. incoming=40 does not delay buffer timing because ETA is unknown."""
+    daily = [{"forecasted_quantity": 10.0}] * 14
+    res_no_incoming = derive_delivery_window_and_timing(
+        available_stock=50, incoming_stock=0, reorder_point=30,
+        daily_forecasts=daily, forecast_horizon_days=14
+    )
+    res_with_incoming = derive_delivery_window_and_timing(
+        available_stock=50, incoming_stock=40, reorder_point=30,
+        daily_forecasts=daily, forecast_horizon_days=14
+    )
+    assert res_no_incoming["days_until_buffer_breach"] == 2
+    assert res_with_incoming["days_until_buffer_breach"] == 2
+
+
+def test_timing_buffer_breach_never_after_stockout():
+    """3. Invariant: buffer breach never occurs after stockout (days_until_buffer_breach <= days_until_stockout)."""
+    daily = [{"forecasted_quantity": 15.0}] * 14
+    res = derive_delivery_window_and_timing(
+        available_stock=20, incoming_stock=100, reorder_point=0,
+        daily_forecasts=daily, forecast_horizon_days=14
+    )
+    assert res["days_until_buffer_breach"] is not None
+    assert res["days_until_stockout"] is not None
+    assert res["days_until_buffer_breach"] <= res["days_until_stockout"]
+
+
+def test_digital_sla_evidence_suppresses_missing_doc_warning():
+    """4. Digital Distribution has SLA evidence -> no missing-SLA warning."""
+    from app.services.chat_presentation import build_decision_reason_bullets
+    rec = {
+        "replenishment_required": True,
+        "recommended_order_quantity": 131,
+        "selected_supplier": {
+            "supplier_id": 10,
+            "supplier_name": "Digital Distribution Lanka",
+            "lead_time_days": 3,
+            "delivery_slack_days": 0,
+            "evidence": [
+                {"document_id": 1, "document_title": "Digital Distribution SLA", "text": "OTIF 98%"}
+            ],
+        },
+        "days_until_stockout": 2,
+        "days_until_buffer_breach": 0,
+        "warnings": [
+            "Supplier 10 lacks any performance or SLA documentation, creating uncertainty around delivery reliability and emergency handling."
+        ],
+    }
+    bullets = build_decision_reason_bullets(rec)
+    for b in bullets:
+        assert "lacks any performance or sla documentation" not in b.lower()
+        assert "supplier 10 lacks" not in b.lower()
 
 
 # ==============================================================================
@@ -701,24 +768,9 @@ def test_evidence_refs_collection_in_supplier_signals():
 
 def test_timing_buffer_breach_5d_stockout_2d_window_2d():
     """
-    Test 17.1: Buffer breach 5d + stockout 2d -> required delivery window = 2d.
-    When physical stockout occurs earlier than or at buffer breach, the stockout horizon governs.
+    Test 17.1: Buffer breach (Day 0 since available 24 <= ROP 30) + stockout 2d -> required delivery window = 2d.
+    When available <= ROP, buffer is breached NOW (0), and stockout governs required delivery window.
     """
-    # Available = 20, Incoming = 60, ROP = 30.
-    # Daily demand: Day 1: 10, Day 2: 10 -> Physical: Day 1: 10, Day 2: 0 (stockout Day 2)
-    # Effective = 80: Day 1: 70, Day 2: 60, Day 3: 50, Day 4: 40, Day 5: 30, Day 6: 20 < 30 (buffer breach Day 6 or 5)
-    daily = [
-        {"forecasted_quantity": 10.0},
-        {"forecasted_quantity": 10.0},
-        {"forecasted_quantity": 10.0},
-        {"forecasted_quantity": 10.0},
-        {"forecasted_quantity": 10.0},
-        {"forecasted_quantity": 10.0},
-        {"forecasted_quantity": 10.0},
-    ]
-    # For exactly 5d buffer breach with available=24, incoming=60 (effective=84), ROP=30:
-    # Day 1: 84-12=72, Day 2: 72-12=60, Day 3: 60-12=48, Day 4: 48-12=36, Day 5: 36-12=24 < 30 (breach Day 5)
-    # Physical: Day 1: 24-12=12, Day 2: 12-12=0 <= 0 (stockout Day 2)
     daily_demo = [{"forecasted_quantity": 12.0}] * 7
     result = derive_delivery_window_and_timing(
         available_stock=24,
@@ -727,7 +779,7 @@ def test_timing_buffer_breach_5d_stockout_2d_window_2d():
         forecast_horizon_days=14,
         incoming_stock=60,
     )
-    assert result["days_until_buffer_breach"] == 5
+    assert result["days_until_buffer_breach"] == 0
     assert result["days_until_stockout"] == 2
     assert result["required_delivery_window_days"] == 2
 

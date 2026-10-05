@@ -588,11 +588,17 @@ def search_documents(
 
     clean_query = query.strip()
     collection = _get_collection()
-    where: Dict[str, Any] = {}
+    clauses = []
     if document_type:
-        where["document_type"] = document_type
+        clauses.append({"document_type": document_type})
     if supplier_id is not None:
-        where["supplier_id"] = supplier_id
+        clauses.append({"supplier_id": supplier_id})
+
+    where_filter = None
+    if len(clauses) == 1:
+        where_filter = clauses[0]
+    elif len(clauses) > 1:
+        where_filter = {"$and": clauses}
 
     # Over-fetch candidates to ensure top_k valid chunks after stale vector filtering
     fetch_limit = min(max(top_k * 3, 10), 50)
@@ -601,7 +607,7 @@ def search_documents(
     results = collection.query(
         query_embeddings=[query_emb],
         n_results=fetch_limit,
-        where=where if where else None,
+        where=where_filter,
         include=["documents", "metadatas", "distances"],
     )
 
