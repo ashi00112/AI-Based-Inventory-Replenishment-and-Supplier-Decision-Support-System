@@ -276,26 +276,31 @@ export default function Transactions() {
       <Navbar />
 
       {/* Main Content */}
-      <main className="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 py-8 space-y-6">
-        {/* Breadcrumb & Action */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div className="flex items-center gap-2 text-xs text-[#EAF4F4]/60 font-medium">
-            <Link to="/" className="hover:text-malachite transition">Dashboard</Link>
-            <span>/</span>
-            <Link to="/inventory" className="hover:text-malachite transition">Inventory</Link>
-            <span>/</span>
-            <span className="text-white font-semibold">Transactions Ledger</span>
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-6">
+        {/* Standardized Page Header */}
+        <section className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-white/[0.08] pb-6">
+          <div>
+            <div className="flex items-center gap-2 text-xs font-semibold text-[#03D26F] mb-1.5 font-mono">
+              <ArrowRightLeft className="w-4 h-4" />
+              <span>Inventory Management</span>
+            </div>
+            <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
+              Transactions Ledger
+            </h1>
+            <p className="text-xs text-[#EAF4F4]/70 mt-1">
+              Audit trail of warehouse stock movements, inbound purchase receipts, and sales deductions.
+            </p>
           </div>
 
           <button
             type="button"
             onClick={() => handleOpenModal()}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-malachite hover:bg-[#03b860] text-[#161514] font-bold rounded-xl text-xs transition shadow-lg shadow-malachite/20 cursor-pointer self-start sm:self-auto shrink-0"
+            className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#03D26F] hover:bg-[#02be63] text-[#161514] font-bold rounded-xl text-xs transition shadow-lg shadow-[#03D26F]/25 cursor-pointer self-start sm:self-auto shrink-0"
           >
-            <Plus className="w-4 h-4" />
+            <Plus className="w-4 h-4 text-[#161514]" />
             <span>Record Transaction</span>
           </button>
-        </div>
+        </section>
 
         {/* Global Notifications */}
         {serverError && (
