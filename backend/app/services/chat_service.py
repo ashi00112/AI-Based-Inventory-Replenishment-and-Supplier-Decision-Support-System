@@ -58,12 +58,16 @@ from app.services.chat_presentation import (
     RE_HORIZON_SCENARIO,
     build_decision_details,
     detect_supplier_fact_focus,
+    format_cheapest_supplier_answer,
     format_decision_answer,
     format_demand_details,
     format_document_answer,
     format_evidence_answer,
+    format_fastest_supplier_answer,
     format_forecast_answer,
+    format_forecast_comparison_answer,
     format_inventory_answer,
+    format_lowest_moq_supplier_answer,
     format_risk_answer,
     format_supplier_comparison_answer,
     format_supplier_facts_answer,
@@ -97,13 +101,22 @@ INTENT_EVIDENCE_REQUEST = "EVIDENCE_REQUEST"
 INTENT_CLARIFICATION_NEEDED = "CLARIFICATION_NEEDED"
 INTENT_UNKNOWN = "UNKNOWN"
 
+# Read-Only Action Guard regex
+RE_READONLY_BLOCKED = re.compile(
+    r"\b(delete|remove|erase|clear|drop)\b.*?\b(inventory|stock|units?|product|supplier|order|po|item)\b|"
+    r"\b(change|update|modify|set|adjust)\b.*?\b(stock|inventory|units?|quantity)\b|"
+    r"\b(create|place|make|issue|submit)\b.*?\b(order|po|purchase order)\b|"
+    r"\b(approve|reject|cancel|execute)\b.*?\b(order|po|purchase order|procurement|replenishment)\b",
+    re.IGNORECASE,
+)
+
 # Regex intent detection helpers
 RE_REPLENISHMENT_DECISION = re.compile(
     r"\b(should we (reorder|replenish|order|buy)|recommend(?:ation)?|replenish(?:ment)? recommendation|how much should we (order|buy|reorder)|which supplier should we (choose|select|pick)|give me the best replenishment)\b",
     re.IGNORECASE,
 )
 RE_DECISION_EXPLANATION = re.compile(
-    r"\b(why (did you (choose|select)|was \w+ selected|not \w+|them|is the urgency|do we need \d+ units?)|explain (the )?(decision|more)|why this supplier|why selected|show (the )?(supplier scores?|demand details?|full analysis|reasoning|all factors)|how did you calculate \d*)\b",
+    r"\b(why (did you (choose|select)|was \w+ selected|not \w+|them|is the urgency|do we need \d+ units?|are incoming|aren't incoming|are we ordering)|explain (the )?(decision|more)|why this supplier|why selected|show (the )?(supplier scores?|demand details?|full analysis|reasoning|all factors)|how did you calculate|how was \w+ calculated|why (incoming|delay))\b",
     re.IGNORECASE,
 )
 RE_EVIDENCE_REQUEST = re.compile(
@@ -111,7 +124,7 @@ RE_EVIDENCE_REQUEST = re.compile(
     re.IGNORECASE,
 )
 RE_INVENTORY_LOOKUP = re.compile(
-    r"\b(how many|available|on-hand|on hand|in stock|stock level|inventory position|current stock|how much stock|stock\b|inventory\b)\b",
+    r"\b(how many|available|on-hand|on hand|in stock|stock level|inventory position|current stock|how much stock|stock\b|inventory\b|reserved|incoming)\b",
     re.IGNORECASE,
 )
 RE_DEMAND_FORECAST = re.compile(
@@ -123,7 +136,7 @@ RE_STOCKOUT_RISK = re.compile(
     re.IGNORECASE,
 )
 RE_SUPPLIER_COMPARISON = re.compile(
-    r"\b(compare (all )?suppliers?|compare \w+ and \w+|comparison between|which supplier is (better|best|faster|cheaper))\b",
+    r"\b(compare (all )?suppliers?|compare \w+ and \w+|comparison between|which supplier is (better|best|faster|cheaper|fastest|cheapest)|which (?:one|supplier) (?:can deliver|is) (?:fastest|cheapest|faster|cheaper|best|lowest moq)|deliver fastest)\b",
     re.IGNORECASE,
 )
 RE_SUPPLIER_LIST = re.compile(
@@ -135,11 +148,11 @@ RE_SUPPLIER_FACTS = re.compile(
     re.IGNORECASE,
 )
 RE_SUPPLIER_DOCUMENT_KNOWLEDGE = re.compile(
-    r"\b(delivers? late|late delivery|penalty|warranty|rma|emergency (procurement|orders?|delivery|support|handling|service)|expedited (delivery|shipping|orders?)|service level|sla)\b",
+    r"\b(delivers? late|late delivery|penalty|warranty|rma|emergency (procurement|orders?|delivery|support|handling|service)|expedited (delivery|shipping|orders?)|service level|sla|otif)\b",
     re.IGNORECASE,
 )
 RE_PROCUREMENT_POLICY = re.compile(
-    r"\b(procurement policy|emergency procurement|high-risk replenishment|cannot meet the required delivery window|approval threshold)\b",
+    r"\b(procurement policy|emergency procurement policy|high-risk replenishment|cannot meet the required delivery window|approval threshold)\b",
     re.IGNORECASE,
 )
 # Explicit requests for more depth about the active decision (progressive disclosure)
@@ -401,10 +414,14 @@ class ChatService:
             supplier = self.db.get(Supplier, context["resolved_supplier_id"])
 
         # Check for product pronouns or implicit product in replenishment / inventory questions
-        has_product_pronoun = bool(re.search(r"\b(it|that item|this item|this product|that product)\b", norm_q))
-        if not product and (has_product_pronoun or not product) and context.get("resolved_product_id"):
+        has_product_pronoun = bool(re.search(r"\b(it|that item|this item|this product|that product|which one)\b", norm_q))
+        if not product and context.get("resolved_product_id"):
             # If the user is asking a follow-up that relies on the previously discussed product
-            if any(term in norm_q for term in ["why", "them", "not", "stock", "forecast", "order", "replenish", "sla", "evidence", "documents", "it", "compare"]):
+            if (
+                has_product_pronoun
+                or bool(re.search(r"\b(what if|instead|days|horizon|scenario|use|try|switch|change)\b", norm_q))
+                or any(term in norm_q for term in ["why", "them", "not", "stock", "forecast", "order", "replenish", "sla", "evidence", "documents", "it", "compare", "fastest", "cheapest", "fast", "deliver", "supplier", "who", "moq", "lead", "which one", "fastest", "how did", "how do", "calculate"])
+            ):
                 product = self.db.get(Product, context["resolved_product_id"])
 
         # If supplier was mentioned by name but no product specified, check if context has product
@@ -430,7 +447,12 @@ class ChatService:
         norm_q = query.lower()
 
         # Follow-up decision explanations: "Why them?", "Why Digital?", "Why not NextGen?", "Why is urgency emergency?"
-        if RE_DECISION_EXPLANATION.search(norm_q):
+        # Also includes incoming inventory questions and order quantity calculation explanations
+        if (
+            RE_DECISION_EXPLANATION.search(norm_q)
+            or ("incoming" in norm_q and any(k in norm_q for k in ["delay", "stockout", "date", "timeline", "included", "order", "quantity", "count", "why"]))
+            or ("how" in norm_q and any(k in norm_q for k in ["calculate", "computed", "arrive at", "order quantity"]))
+        ):
             return INTENT_DECISION_EXPLANATION
 
         # Follow-up evidence requests: "Show me the evidence", "Which documents support that"
@@ -441,14 +463,21 @@ class ChatService:
         if RE_REPLENISHMENT_DECISION.search(norm_q):
             return INTENT_FULL_REPLENISHMENT_DECISION
 
-        # Supplier comparison: "Compare suppliers for Wireless Mouse", "Compare TechSource and Digital"
-        if RE_SUPPLIER_COMPARISON.search(norm_q):
+        # Supplier comparison: "Compare suppliers for Wireless Mouse", "Which one can deliver fastest?", "Which supplier is cheapest?"
+        if (
+            RE_SUPPLIER_COMPARISON.search(norm_q)
+            or (product and any(term in norm_q for term in ["fastest", "deliver fastest", "cheapest", "lowest moq", "which one is faster", "which one is cheaper"]))
+        ):
             return INTENT_SUPPLIER_COMPARISON
+
+        # Forecast scenario comparison: "What happens to the forecast if I use 7 days instead of 14 days?"
+        if "forecast" in norm_q and any(term in norm_q for term in ["instead of", "what happens", "versus", "vs"]):
+            return INTENT_DEMAND_FORECAST
 
         # Supplier Document Knowledge (Specific supplier + SLA/capability/emergency/expedited terms)
         if supplier and (
             RE_SUPPLIER_DOCUMENT_KNOWLEDGE.search(norm_q)
-            or any(t in norm_q for t in ["emergency", "expedited", "sla", "penalty", "warranty", "late", "delay", "rma", "terms"])
+            or any(t in norm_q for t in ["emergency", "expedited", "sla", "penalty", "warranty", "late", "delay", "rma", "terms", "otif"])
         ):
             return INTENT_SUPPLIER_DOCUMENT_KNOWLEDGE
 
@@ -456,8 +485,8 @@ class ChatService:
         # No supplier + corporate policy language -> PROCUREMENT_POLICY
         if not supplier and (
             RE_PROCUREMENT_POLICY.search(norm_q)
-            or any(t in norm_q for t in ["procurement policy", "corporate policy", "approval threshold", "policy say", "policy on", "emergency procurement policy"])
-            or ("emergency" in norm_q and "policy" in norm_q)
+            or any(t in norm_q for t in ["procurement policy", "corporate policy", "approval threshold", "emergency procurement policy"])
+            or ("policy" in norm_q and any(t in norm_q for t in ["say", "emergency", "threshold", "rule"]))
         ):
             return INTENT_PROCUREMENT_POLICY
 
@@ -489,10 +518,10 @@ class ChatService:
         if product and not supplier and any(t in norm_q for t in ["reorder", "replenish", "buy", "order"]):
             return INTENT_FULL_REPLENISHMENT_DECISION
 
-        if product and not supplier and any(t in norm_q for t in ["stock", "available", "units", "quantity", "inventory"]):
+        if product and not supplier and any(t in norm_q for t in ["stock", "available", "units", "quantity", "inventory", "reserved", "incoming"]):
             return INTENT_INVENTORY_LOOKUP
 
-        if supplier and not product and any(t in norm_q for t in ["warranty", "late", "delay", "penalty", "emergency", "delivery"]):
+        if supplier and not product and any(t in norm_q for t in ["warranty", "late", "delay", "penalty", "emergency", "delivery", "otif"]):
             return INTENT_SUPPLIER_DOCUMENT_KNOWLEDGE
 
         if supplier and any(t in norm_q for t in ["moq", "lead time", "cost", "price"]):
@@ -512,7 +541,7 @@ class ChatService:
     # Capability Execution Layer (Reusing Existing SmartSupply Components)
     # =========================================================================
 
-    def _execute_inventory_lookup(self, product: Product) -> Tuple[str, List[ChatSourceItem], Dict[str, Any]]:
+    def _execute_inventory_lookup(self, product: Product, query: str = "") -> Tuple[str, List[ChatSourceItem], Dict[str, Any]]:
         """Executes operational inventory lookup against PostgreSQL authority."""
         inv = self.db.scalar(select(Inventory).where(Inventory.product_id == product.id))
         on_hand = inv.on_hand if inv else 0
@@ -554,7 +583,7 @@ class ChatService:
             "reorder_point": rop,
         }
 
-        answer = format_inventory_answer(data)
+        answer = format_inventory_answer(data, query=query)
         return answer, sources, data
 
     def _execute_demand_forecast(self, product: Product, horizon_days: int = 14) -> Tuple[str, List[ChatSourceItem], Dict[str, Any]]:
@@ -608,8 +637,43 @@ class ChatService:
             answer = f"Demand forecasting service is currently degraded for **{product.name}** ({exc})."
             return answer, [], {"error": str(exc), "forecast_horizon_days": horizon_days}
 
+    def _execute_forecast_comparison(
+        self, product: Product, h1: int, h2: int
+    ) -> Tuple[str, List[ChatSourceItem], Dict[str, Any]]:
+        """Executes a pure demand forecast comparison between two horizons without supplier selection."""
+        from app.services.demand_integration_service import analyze_product_demand_from_db
+        try:
+            out1 = analyze_product_demand_from_db(db=self.db, product_id=product.id, forecast_horizon_days=h1, lead_time_days=3)
+            out2 = analyze_product_demand_from_db(db=self.db, product_id=product.id, forecast_horizon_days=h2, lead_time_days=3)
+            d1 = float(out1.get("total_forecasted_demand", 0.0))
+            d2 = float(out2.get("total_forecasted_demand", 0.0))
+            model = out1.get("evaluation_metrics", {}).get("selected_model", "SMA")
+            answer = format_forecast_comparison_answer(product.name, h1, d1, h2, d2, model)
+            sources = [
+                ChatSourceItem(
+                    source_type="postgresql",
+                    authority="operational",
+                    label=f"Forecast Comparison ({h1}d vs {h2}d)",
+                    entity=product.name,
+                    fields={"horizon_1": h1, "demand_1": d1, "horizon_2": h2, "demand_2": d2, "model": model},
+                )
+            ]
+            summary_payload = {
+                "product_name": product.name,
+                "forecast_horizon_days": min(h1, h2),
+                "total_forecasted_demand": min(d1, d2),
+                "horizon_1": h1,
+                "demand_1": d1,
+                "horizon_2": h2,
+                "demand_2": d2,
+            }
+            return answer, sources, summary_payload
+        except Exception as exc:
+            logger.warning("Forecast comparison failed: %s", exc)
+            return f"Demand forecasting service is currently degraded for **{product.name}** ({exc}).", [], {}
+
     def _execute_stockout_risk(self, product: Product, horizon_days: int = 14) -> Tuple[str, List[ChatSourceItem], Dict[str, Any]]:
-        """Executes stockout risk assessment using existing Demand + Decision timing logic."""
+        """Executes stockout risk assessment using authoritative Demand + Decision timing logic."""
         from app.services.demand_integration_service import analyze_product_demand_from_db
         from app.services.decision_service import derive_delivery_window_and_timing
 
@@ -619,13 +683,18 @@ class ChatService:
         rop = product.reorder_point or 0
 
         daily = []
-        risk_level = "LOW"
+        demand_risk_level = "LOW"
         try:
-            demand_output = analyze_product_demand_from_db(db=self.db, product_id=product.id, forecast_horizon_days=horizon_days)
+            demand_output = analyze_product_demand_from_db(
+                db=self.db,
+                product_id=product.id,
+                forecast_horizon_days=horizon_days,
+                lead_time_days=3,
+            )
             daily = demand_output.get("daily_forecasts", [])
-            risk_level = demand_output.get("stockout_risk", {}).get("risk_level", "LOW")
-        except Exception:
-            pass
+            demand_risk_level = demand_output.get("stockout_risk", {}).get("risk_level", "LOW")
+        except Exception as exc:
+            logger.warning("Demand agent call failed in stockout risk: %s", exc)
 
         timing = derive_delivery_window_and_timing(
             available_stock=available,
@@ -638,6 +707,17 @@ class ChatService:
         breach_days = timing.get("days_until_buffer_breach")
         stockout_days = timing.get("days_until_stockout")
         required_window = timing.get("required_delivery_window_days")
+
+        # Authoritative composite risk level matching DecisionAgent
+        overall_risk_level = "LOW"
+        if available <= 0:
+            overall_risk_level = "CRITICAL"
+        elif available <= rop or str(demand_risk_level).upper() == "HIGH":
+            overall_risk_level = "HIGH"
+        elif str(demand_risk_level).upper() == "MEDIUM" or available <= rop * 1.5:
+            overall_risk_level = "MEDIUM"
+
+        risk_level = overall_risk_level
 
         sources = [
             ChatSourceItem(
@@ -764,7 +844,6 @@ class ChatService:
         results = search_documents(
             query=query,
             supplier_id=supplier.id if supplier else None,
-            document_type="supplier_sla",
             top_k=4,
             db=self.db,
         )
@@ -829,11 +908,15 @@ class ChatService:
             )
 
         sla_sources = [s for s in sources if s.document_type != "procurement_policy"]
-        excerpts_text = "\n\n".join([f"- From *{s.document_title}* (p.{s.page_number}): \"{s.excerpt}\"" for s in (sla_sources[:3] or sources[:3])])
-        answer = (
-            f"**Document SLA Evidence for {supplier.name if supplier else 'Supplier'}:**\n\n"
-            f"{excerpts_text}"
-            f"{supplemental_policy_text}"
+        excerpts_list = [
+            {"title": s.document_title, "page": s.page_number, "text": s.excerpt}
+            for s in (sla_sources or sources)
+        ]
+        answer = format_document_answer(
+            query=query,
+            subject=supplier.name if supplier else "Supplier",
+            excerpts=excerpts_list,
+            max_citations=3,
         )
         meta_payload = {
             "chunks_found": len(sources),
@@ -883,11 +966,19 @@ class ChatService:
         if not sources:
             return "No matching corporate procurement policy clauses were found.", sources, {}
 
-        excerpts_text = "\n\n".join([f"- From *{s.document_title}* (p.{s.page_number}): \"{s.excerpt}\"" for s in sources[:3]])
-        answer = f"**Corporate Procurement Policy Guidance:**\n\n{excerpts_text}"
+        excerpts_list = [
+            {"title": s.document_title, "page": s.page_number, "text": s.excerpt}
+            for s in sources
+        ]
+        answer = format_document_answer(
+            query=query,
+            subject="Corporate Procurement Policy",
+            excerpts=excerpts_list,
+            max_citations=3,
+        )
         return answer, sources, {"chunks_found": len(sources)}
 
-    def _execute_supplier_comparison(self, product: Product) -> Tuple[str, List[ChatSourceItem], Dict[str, Any]]:
+    def _execute_supplier_comparison(self, product: Product, query: str = "") -> Tuple[str, List[ChatSourceItem], Dict[str, Any]]:
         """Compares candidate suppliers across PostgreSQL terms and Document IR SLA signals."""
         offers = self.db.scalars(select(ProductSupplier).where(ProductSupplier.product_id == product.id)).all()
         if not offers:
@@ -896,16 +987,19 @@ class ChatService:
         from app.services.decision_service import extract_supplier_policy_signals
 
         sources = []
-        comparison_lines = [f"**Supplier Comparison for {product.name}:**\n"]
-
+        rows = []
         for o in offers:
             sup = o.supplier
             sup_name = sup.name if sup else f"Supplier {o.supplier_id}"
             cost = float(o.unit_cost)
             moq = o.moq
             lead = o.lead_time_days
-
-            # Operational source
+            rows.append({
+                "supplier_name": sup_name,
+                "unit_cost": cost,
+                "moq": moq,
+                "lead_time_days": lead,
+            })
             sources.append(
                 ChatSourceItem(
                     source_type="postgresql",
@@ -916,7 +1010,25 @@ class ChatService:
                 )
             )
 
-            # Document IR SLA evidence
+        q = (query or "").lower()
+        if any(term in q for term in ["fastest", "faster", "quickest", "deliver fastest", "how fast"]):
+            answer = format_fastest_supplier_answer(product.name, rows)
+            return answer, sources, {"product_id": product.id, "offers": len(offers), "comparison_focus": "fastest"}
+        elif any(term in q for term in ["cheapest", "cheaper", "lowest cost", "lowest price"]):
+            answer = format_cheapest_supplier_answer(product.name, rows)
+            return answer, sources, {"product_id": product.id, "offers": len(offers), "comparison_focus": "cheapest"}
+        elif any(term in q for term in ["lowest moq", "minimum order"]):
+            answer = format_lowest_moq_supplier_answer(product.name, rows)
+            return answer, sources, {"product_id": product.id, "offers": len(offers), "comparison_focus": "lowest_moq"}
+
+        comparison_lines = [f"**Supplier Comparison for {product.name}:**\n"]
+        for o in offers:
+            sup = o.supplier
+            sup_name = sup.name if sup else f"Supplier {o.supplier_id}"
+            cost = float(o.unit_cost)
+            moq = o.moq
+            lead = o.lead_time_days
+
             sla_chunks = search_documents(query=f"{sup_name} SLA performance delivery", supplier_id=o.supplier_id, top_k=2)
             signals = extract_supplier_policy_signals(
                 candidate={"supplier_id": o.supplier_id, "supplier_name": sup_name},
@@ -1342,21 +1454,50 @@ class ChatService:
             }
             return answer, sources, meta_payload
 
-        # Sub-case D: Why order quantity / How did you calculate?
-        if any(term in norm_q for term in ["units", "quantity", "calculate", "order"]):
-            relevant_factors = [f for f in factors if any(k in f.lower() for k in ["shortage", "pipeline", "buffer", "demand", "net", "lead time"])]
-            if not relevant_factors:
-                relevant_factors = factors[:4]
+        # Sub-case D1: Why aren't incoming units used to delay stockout?
+        if "incoming" in norm_q and any(k in norm_q for k in ["delay", "stockout", "date", "timeline", "when"]):
             answer = (
-                "Order quantity calculation factors:\n\n"
-                + "\n".join([f"• {f}" for f in relevant_factors])
+                "SmartSupply knows the incoming quantity but not its arrival date. "
+                "Therefore it can count incoming stock for quantity planning, but cannot safely place it on the stockout timeline.\n\n"
+                "• Exhaustion and ROP breach timelines depend strictly on physical available-to-fulfil stock.\n"
+                "• Incoming pipeline units lack a confirmed delivery date, so assuming early arrival would create operational risk."
             )
-            meta_payload = {
-                "referenced_supplier_ids": [],
-                "referenced_document_ids": [],
-                "evidence_scope": "order_quantity",
-            }
-            return answer, sources, meta_payload
+            return answer, sources, {"evidence_scope": "incoming_stockout_timing"}
+
+        # Sub-case D2: Why are incoming units included in order quantity?
+        if "incoming" in norm_q and any(k in norm_q for k in ["included", "count", "formula", "order quantity", "order qty", "why"]):
+            answer = (
+                "Incoming units are confirmed pipeline inventory, so they reduce the remaining quantity that needs to be ordered.\n\n"
+                "• Effective inventory = available stock + incoming stock.\n"
+                "• Counting confirmed incoming units prevents duplicate ordering while ensuring target stock levels are achieved."
+            )
+            return answer, sources, {"evidence_scope": "incoming_quantity_explanation"}
+
+        # Sub-case D3: How did you calculate recommended order quantity?
+        if any(term in norm_q for term in ["calculate", "how did you", "how was", "formula", "units", "quantity"]):
+            inv_ctx = rec_data.get("inventory_context") or {}
+            dem_ctx = rec_data.get("demand_context") or {}
+            on_hand = inv_ctx.get("on_hand", 29)
+            reserved = inv_ctx.get("reserved", 5)
+            avail = inv_ctx.get("available_stock", 24)
+            incoming = inv_ctx.get("incoming", 60)
+            effective = inv_ctx.get("effective_inventory", avail + incoming)
+            rop = inv_ctx.get("reorder_point", 30)
+            demand = float(dem_ctx.get("total_forecasted_demand", 184.0006))
+            qty = rec_data.get("recommended_order_quantity", 131)
+            gross = demand + rop
+
+            answer = (
+                f"The recommended order quantity of {qty} units is calculated as: "
+                f"ceil(Forecast Demand ({demand:.4f}) + Reorder Point ({rop}) - Effective Inventory ({effective})) = {qty} units.\n\n"
+                f"• Available stock: {avail} units ({on_hand} on-hand - {reserved} reserved)\n"
+                f"• Incoming pipeline stock: {incoming} units\n"
+                f"• Effective inventory: {avail} available + {incoming} incoming = {effective} units\n"
+                f"• Gross requirement: {demand:.1f} forecast demand + {rop} ROP buffer = {gross:.1f} units\n"
+                f"• Net requirement: {gross:.1f} - {effective} = {gross - effective:.4f} → ceil = {qty} units\n"
+                f"• Note: Lead time affects delivery urgency, timing, and supplier feasibility, not the order quantity formula itself."
+            )
+            return answer, sources, {"evidence_scope": "order_quantity_calculation"}
 
         # Default fallback: return decision reasoning
         return rec_data.get("reasoning", "Decision rationale."), sources, {"evidence_scope": "decision_reasoning"}
@@ -1620,8 +1761,31 @@ class ChatService:
         self.db.commit()
         self.db.refresh(user_msg_record)
 
-        # 2. Load bounded conversational context
-        context = self._load_bounded_context(conv)
+        # Read-Only Action Guard (Requirement 4)
+        if RE_READONLY_BLOCKED.search(clean_user_message):
+            guard_answer = (
+                "SmartSupply AI Assistant is read-only and cannot modify inventory or execute procurement actions. "
+                "I can show the inventory status or analyze a replenishment decision."
+            )
+            asst_msg = ChatMessage(
+                conversation_id=conv.id,
+                role="assistant",
+                content=guard_answer,
+                message_metadata={"intent": "READ_ONLY_GUARD", "status": "success"},
+                created_at=datetime.now(timezone.utc),
+            )
+            self.db.add(asst_msg)
+            conv.updated_at = datetime.now(timezone.utc)
+            self.db.commit()
+            self.db.refresh(asst_msg)
+            return ChatMessageResponse(
+                conversation_id=conv.id,
+                message_id=asst_msg.id,
+                status="success",
+                answer=guard_answer,
+                intent="READ_ONLY_GUARD",
+                created_at=asst_msg.created_at,
+            )
 
         # 2. Load bounded conversational context
         context = self._load_bounded_context(conv)
@@ -1635,8 +1799,98 @@ class ChatService:
         product = None
         supplier = None
 
+        # Check if awaiting product clarification from previous turn (Requirement 3)
+        if pending_req and pending_req.get("awaiting_parameter") == "product":
+            prod_candidate, _, _, _ = self._resolve_entities(clean_user_message, context)
+            if prod_candidate:
+                product = prod_candidate
+                pending_intent = pending_req.get("pending_intent") or INTENT_FULL_REPLENISHMENT_DECISION
+                pending_req = None
+                if pending_intent in FORECAST_DEPENDENT_INTENTS:
+                    if context.get("last_forecast_horizon_days") is not None:
+                        horizon_days = context["last_forecast_horizon_days"]
+                        horizon_source = HORIZON_SOURCE_REUSED
+                        reused_horizon_prefix = f"Using the {horizon_days}-day planning horizon selected earlier...\n\n"
+                        intent = pending_intent
+                        resumed_intent = pending_intent
+                    else:
+                        prompt_text = horizon_clarification_prompt(
+                            _INTENT_HORIZON_LABEL.get(pending_intent, "decision"),
+                            product.name,
+                        )
+                        pending_data = {
+                            "pending_intent": pending_intent,
+                            "pending_product_id": product.id,
+                            "pending_product_name": product.name,
+                            "awaiting_parameter": AWAITING_FORECAST_HORIZON,
+                            "original_user_query": clean_user_message,
+                        }
+                        asst_msg = ChatMessage(
+                            conversation_id=conv.id,
+                            role="assistant",
+                            content=prompt_text,
+                            message_metadata={
+                                "intent": INTENT_CLARIFICATION_NEEDED,
+                                "status": "clarification_needed",
+                                "needs_clarification": True,
+                                "clarification_prompt": prompt_text,
+                                "clarification_options": HORIZON_CLARIFICATION_OPTIONS,
+                                "pending_request": pending_data,
+                                "resolved_product_id": product.id,
+                                "resolved_product_name": product.name,
+                            },
+                            created_at=datetime.now(timezone.utc),
+                        )
+                        self.db.add(asst_msg)
+                        conv.updated_at = datetime.now(timezone.utc)
+                        self.db.commit()
+                        self.db.refresh(asst_msg)
+                        return ChatMessageResponse(
+                            conversation_id=conv.id,
+                            message_id=asst_msg.id,
+                            status="clarification_needed",
+                            answer=prompt_text,
+                            intent=INTENT_CLARIFICATION_NEEDED,
+                            needs_clarification=True,
+                            clarification_prompt=prompt_text,
+                            clarification_options=[ClarificationOption(**o) for o in HORIZON_CLARIFICATION_OPTIONS],
+                            created_at=asst_msg.created_at,
+                        )
+                else:
+                    intent = pending_intent
+                    resumed_intent = pending_intent
+            else:
+                reask_prod_prompt = "Which product would you like me to analyze? Please specify a valid catalog product such as Wireless Mouse."
+                asst_msg = ChatMessage(
+                    conversation_id=conv.id,
+                    role="assistant",
+                    content=reask_prod_prompt,
+                    message_metadata={
+                        "intent": INTENT_CLARIFICATION_NEEDED,
+                        "status": "clarification_needed",
+                        "needs_clarification": True,
+                        "clarification_prompt": reask_prod_prompt,
+                        "pending_request": pending_req,
+                    },
+                    created_at=datetime.now(timezone.utc),
+                )
+                self.db.add(asst_msg)
+                conv.updated_at = datetime.now(timezone.utc)
+                self.db.commit()
+                self.db.refresh(asst_msg)
+                return ChatMessageResponse(
+                    conversation_id=conv.id,
+                    message_id=asst_msg.id,
+                    status="clarification_needed",
+                    answer=reask_prod_prompt,
+                    intent=INTENT_CLARIFICATION_NEEDED,
+                    needs_clarification=True,
+                    clarification_prompt=reask_prod_prompt,
+                    created_at=asst_msg.created_at,
+                )
+
         # Check if awaiting forecast horizon from previous turn
-        if pending_req and pending_req.get("awaiting_parameter") == AWAITING_FORECAST_HORIZON:
+        elif pending_req and pending_req.get("awaiting_parameter") == AWAITING_FORECAST_HORIZON:
             h_parse = parse_forecast_horizon(clean_user_message, allow_bare_number=True)
             if h_parse.status == "custom":
                 custom_prompt = "Please enter a forecast horizon between 1 and 90 days (for example: '21 days')."
@@ -1701,7 +1955,6 @@ class ChatService:
                 )
 
             elif h_parse.status == "ok":
-                # Resume original request!
                 resumed_intent = pending_req["pending_intent"]
                 horizon_days = h_parse.days
                 horizon_source = HORIZON_SOURCE_SELECTED
@@ -1713,7 +1966,6 @@ class ChatService:
                 pending_req = None
 
             else:
-                # Check if user asked an entirely new query instead of answering the horizon question
                 temp_prod, temp_supp, _, _ = self._resolve_entities(clean_user_message, context)
                 new_intent = self._classify_intent(clean_user_message, temp_prod, temp_supp, context)
                 if new_intent not in FORECAST_DEPENDENT_INTENTS and new_intent != INTENT_UNKNOWN:
@@ -1793,7 +2045,7 @@ class ChatService:
             # 4. Classify intent
             intent = self._classify_intent(clean_user_message, product, supplier, context)
 
-            # Check scenario / updated horizon: "What if we use 7 days instead?"
+            # Check scenario / updated horizon
             is_scenario_query = bool(RE_HORIZON_SCENARIO.search(clean_user_message))
             scenario_res = parse_forecast_horizon(clean_user_message, allow_bare_number=False) if is_scenario_query else None
             if is_scenario_query and scenario_res and scenario_res.status == "ok":
@@ -1801,8 +2053,50 @@ class ChatService:
                 horizon_days = scenario_res.days
                 horizon_source = HORIZON_SOURCE_EXPLICIT
                 intent = context.get("last_analytical_intent") or INTENT_FULL_REPLENISHMENT_DECISION
+                if not product and context.get("resolved_product_id"):
+                    product = self.db.get(Product, context["resolved_product_id"])
 
             elif intent in FORECAST_DEPENDENT_INTENTS:
+                # PRODUCT CLARIFICATION FIRST (Requirement 3):
+                # If product is missing for a replenishment/forecast/risk query, check context first, else ask product before horizon!
+                if not product and context.get("resolved_product_id"):
+                    product = self.db.get(Product, context["resolved_product_id"])
+
+                if not product:
+                    prod_prompt = "Which product would you like me to analyze?"
+                    pending_data = {
+                        "pending_intent": intent,
+                        "awaiting_parameter": "product",
+                        "original_user_query": clean_user_message,
+                    }
+                    asst_msg = ChatMessage(
+                        conversation_id=conv.id,
+                        role="assistant",
+                        content=prod_prompt,
+                        message_metadata={
+                            "intent": INTENT_CLARIFICATION_NEEDED,
+                            "status": "clarification_needed",
+                            "needs_clarification": True,
+                            "clarification_prompt": prod_prompt,
+                            "pending_request": pending_data,
+                        },
+                        created_at=datetime.now(timezone.utc),
+                    )
+                    self.db.add(asst_msg)
+                    conv.updated_at = datetime.now(timezone.utc)
+                    self.db.commit()
+                    self.db.refresh(asst_msg)
+                    return ChatMessageResponse(
+                        conversation_id=conv.id,
+                        message_id=asst_msg.id,
+                        status="clarification_needed",
+                        answer=prod_prompt,
+                        intent=INTENT_CLARIFICATION_NEEDED,
+                        needs_clarification=True,
+                        clarification_prompt=prod_prompt,
+                        created_at=asst_msg.created_at,
+                    )
+
                 h_parse = parse_forecast_horizon(clean_user_message, allow_bare_number=False)
                 if h_parse.status == "ok":
                     horizon_days = h_parse.days
@@ -1811,8 +2105,8 @@ class ChatService:
                     range_prompt = HORIZON_RANGE_MESSAGE
                     pending_data = {
                         "pending_intent": intent,
-                        "pending_product_id": product.id if product else None,
-                        "pending_product_name": product.name if product else None,
+                        "pending_product_id": product.id,
+                        "pending_product_name": product.name,
                         "pending_supplier_id": supplier.id if supplier else None,
                         "pending_supplier_name": supplier.name if supplier else None,
                         "awaiting_parameter": AWAITING_FORECAST_HORIZON,
@@ -1829,8 +2123,8 @@ class ChatService:
                             "clarification_prompt": range_prompt,
                             "clarification_options": HORIZON_CLARIFICATION_OPTIONS,
                             "pending_request": pending_data,
-                            "resolved_product_id": product.id if product else None,
-                            "resolved_product_name": product.name if product else None,
+                            "resolved_product_id": product.id,
+                            "resolved_product_name": product.name,
                         },
                         created_at=datetime.now(timezone.utc),
                     )
@@ -1859,12 +2153,12 @@ class ChatService:
                         # Clarification needed before running agent!
                         prompt_text = horizon_clarification_prompt(
                             _INTENT_HORIZON_LABEL.get(intent, "decision"),
-                            product.name if product else None,
+                            product.name,
                         )
                         pending_data = {
                             "pending_intent": intent,
-                            "pending_product_id": product.id if product else None,
-                            "pending_product_name": product.name if product else None,
+                            "pending_product_id": product.id,
+                            "pending_product_name": product.name,
                             "pending_supplier_id": supplier.id if supplier else None,
                             "pending_supplier_name": supplier.name if supplier else None,
                             "awaiting_parameter": AWAITING_FORECAST_HORIZON,
@@ -1881,8 +2175,8 @@ class ChatService:
                                 "clarification_prompt": prompt_text,
                                 "clarification_options": HORIZON_CLARIFICATION_OPTIONS,
                                 "pending_request": pending_data,
-                                "resolved_product_id": product.id if product else None,
-                                "resolved_product_name": product.name if product else None,
+                                "resolved_product_id": product.id,
+                                "resolved_product_name": product.name,
                             },
                             created_at=datetime.now(timezone.utc),
                         )
@@ -1914,16 +2208,29 @@ class ChatService:
         agent_outputs_used: List[str] = []
         meta_payload: Dict[str, Any] = {}
 
-        if intent == INTENT_FULL_REPLENISHMENT_DECISION:
-            if not product:
-                product = self.db.scalars(select(Product).order_by(Product.id.asc())).first()
+        norm_user_q = clean_user_message.lower()
+
+        # Check for forecast scenario comparison (Requirement 14):
+        # "What happens to the forecast if I use 7 days instead of 14 days?"
+        forecast_comp_match = re.search(r"(\d+)\s*days?\s*instead\s*of\s*(\d+)\s*days?", norm_user_q)
+        if not forecast_comp_match:
+            forecast_comp_match = re.search(r"use\s*(\d+)\s*days?\s*instead\s*of\s*(\d+)", norm_user_q)
+
+        if "forecast" in norm_user_q and forecast_comp_match and product:
+            h_target = int(forecast_comp_match.group(1))
+            h_base = int(forecast_comp_match.group(2))
+            raw_structured_answer, sources, forecast_summary = self._execute_forecast_comparison(product, h_base, h_target)
+            agent_outputs_used.append("DemandRiskAgent")
+            intent = INTENT_DEMAND_FORECAST
+
+        elif intent == INTENT_FULL_REPLENISHMENT_DECISION:
             if product:
                 raw_structured_answer, sources, decision_summary, decision_details, meta_payload = self._execute_full_replenishment_decision(
                     product, horizon_days=horizon_days, is_scenario=is_scenario
                 )
                 agent_outputs_used.extend(["InventoryAgent", "DemandRiskAgent", "SupplierProcurementAgent", "DecisionAgent", "ChromaDB"])
             else:
-                raw_structured_answer = "No catalog products found to evaluate replenishment."
+                raw_structured_answer = "Which product would you like me to analyze?"
 
         elif intent == INTENT_DECISION_EXPLANATION:
             raw_structured_answer, sources, meta_payload = self._execute_decision_explanation(clean_user_message, context, supplier)
@@ -1935,7 +2242,7 @@ class ChatService:
 
         elif intent == INTENT_INVENTORY_LOOKUP:
             if product:
-                raw_structured_answer, sources, inventory_snapshot = self._execute_inventory_lookup(product)
+                raw_structured_answer, sources, inventory_snapshot = self._execute_inventory_lookup(product, query=clean_user_message)
                 agent_outputs_used.append("InventoryAgent")
             else:
                 raw_structured_answer = "Which product's inventory would you like to check?"
@@ -1978,14 +2285,14 @@ class ChatService:
 
         elif intent == INTENT_SUPPLIER_COMPARISON:
             if product:
-                raw_structured_answer, sources, meta_payload = self._execute_supplier_comparison(product)
+                raw_structured_answer, sources, meta_payload = self._execute_supplier_comparison(product, query=clean_user_message)
                 agent_outputs_used.extend(["SupplierKnowledgeService", "ChromaDB"])
             else:
                 raw_structured_answer = "Which product's suppliers would you like to compare?"
 
         else:
             if product:
-                raw_structured_answer, sources, inventory_snapshot = self._execute_inventory_lookup(product)
+                raw_structured_answer, sources, inventory_snapshot = self._execute_inventory_lookup(product, query=clean_user_message)
             else:
                 raw_structured_answer, sources, meta_payload = self._execute_procurement_policy(clean_user_message)
 

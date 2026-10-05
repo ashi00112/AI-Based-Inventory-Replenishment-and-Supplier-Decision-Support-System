@@ -199,23 +199,30 @@ export default function Inventory() {
       <Navbar />
 
       {/* Main Content Area */}
-      <main className="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 py-8 space-y-6">
-        {/* Breadcrumb Navigation & Record Movement Action */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-          <div className="flex items-center gap-2 text-xs text-[#EAF4F4]/60 font-medium">
-            <Link to="/" className="hover:text-malachite transition">Dashboard</Link>
-            <span>/</span>
-            <span className="text-[#EAF4F4] font-semibold">Inventory Management</span>
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-6">
+        {/* Standardized Page Header */}
+        <section className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-white/[0.08] pb-6">
+          <div>
+            <div className="flex items-center gap-2 text-xs font-semibold text-[#03D26F] mb-1.5 font-mono">
+              <Boxes className="w-4 h-4" />
+              <span>Inventory Management</span>
+            </div>
+            <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
+              Stock Overview
+            </h1>
+            <p className="text-xs text-[#EAF4F4]/70 mt-1">
+              Monitor real-time warehouse inventory, reserved allocations, and reorder point thresholds.
+            </p>
           </div>
 
           <Link
             to="/transactions"
-            className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-malachite/10 hover:bg-malachite/20 text-malachite border border-malachite/30 font-semibold text-xs transition cursor-pointer self-start sm:self-auto shadow-sm"
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#03D26F] hover:bg-[#02be63] text-[#161514] font-bold text-xs transition cursor-pointer self-start sm:self-auto shadow-lg shadow-[#03D26F]/25 shrink-0"
           >
-            <ArrowRightLeft className="w-3.5 h-3.5" />
-            <span>Record Movement / Transaction</span>
+            <ArrowRightLeft className="w-4 h-4" />
+            <span>Record Movement</span>
           </Link>
-        </div>
+        </section>
 
         {/* Global Feedback Notifications */}
         {serverError && (
