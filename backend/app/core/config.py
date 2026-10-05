@@ -61,17 +61,18 @@ class Settings(BaseSettings):
     CHROMA_COLLECTION_NAME: str = "smartsupply_documents"
     DOCUMENT_INDEX_VERSION: str = "v1"
 
-    # LLM & Member 3 Supplier Agent configuration
-    GEMINI_API_KEY: Union[str, None] = None
-    LLM_MODEL_NAME: str = "gemini-1.5-flash"
-    LLM_TIMEOUT_SECONDS: int = 15
+    # Supplier Agent Entity Matching Configuration
     FUZZY_MATCH_THRESHOLD: float = 75.0
     FUZZY_AMBIGUITY_MARGIN: float = 5.0
 
-    # Grok LLM configuration (Member 4 Decision Agent)
+    # Grok/Groq LLM Configuration (Standardized Production LLM)
     GROK_API_KEY: Union[str, None] = None
+    GROQ_API_KEY: Union[str, None] = None
     GROK_MODEL: str = "grok-beta"
+    GROQ_MODEL: Union[str, None] = None
     GROK_API_BASE_URL: str = "https://api.x.ai/v1"
+    GROQ_API_BASE_URL: Union[str, None] = None
+    LLM_TIMEOUT_SECONDS: int = 15
 
 
     @property

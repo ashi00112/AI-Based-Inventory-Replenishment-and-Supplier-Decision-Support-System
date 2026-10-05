@@ -12,6 +12,7 @@ from app.models.supplier import Supplier
 from app.models.product_supplier import ProductSupplier
 from app.models.document import Document, DocumentType
 from app.models.decision import DecisionRecommendation, ApprovalStatus
+from app.models.chat import ChatConversation, ChatMessage
 
 __all__ = [
     "Base",
@@ -29,5 +30,7 @@ __all__ = [
     "DocumentType",
     "DecisionRecommendation",
     "ApprovalStatus",
+    "ChatConversation",
+    "ChatMessage",
 ]
 

@@ -1,14 +1,15 @@
 """
 LLM Provider Abstraction for SmartSupply.
-Provides a clean interface for LLM reasoning with production-safe REST integration for Gemini,
+Provides a clean interface for LLM reasoning with production-safe REST integration for Grok (xAI),
 strict timeout enforcement, secret sanitization, and mock support for deterministic testing.
 """
 
 import abc
 import json
 import logging
+import os
 import re
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 import httpx
 
 from app.core.config import settings
@@ -30,88 +31,10 @@ class BaseLLMProvider(abc.ABC):
         system_prompt: str,
         user_prompt: str,
         timeout: Optional[int] = None,
+        **kwargs: Any,
     ) -> str:
         """Generates a text completion given system and user prompts."""
         raise NotImplementedError
-
-
-class GeminiRESTProvider(BaseLLMProvider):
-    """
-    Lightweight, production-safe Google Gemini REST provider using HTTPX.
-    Does not require external heavy SDKs and isolates network calls.
-    """
-
-    def __init__(
-        self,
-        api_key: Optional[str] = None,
-        model_name: Optional[str] = None,
-        timeout_seconds: Optional[int] = None,
-    ):
-        self.api_key = api_key or getattr(settings, "GEMINI_API_KEY", None)
-        self.model_name = model_name or getattr(settings, "LLM_MODEL_NAME", "gemini-1.5-flash")
-        self.timeout_seconds = timeout_seconds or getattr(settings, "LLM_TIMEOUT_SECONDS", 15)
-
-    def is_configured(self) -> bool:
-        return bool(self.api_key and self.api_key.strip())
-
-    def generate_text(
-        self,
-        system_prompt: str,
-        user_prompt: str,
-        timeout: Optional[int] = None,
-    ) -> str:
-        if not self.is_configured():
-            raise LLMProviderError("Gemini API key is not configured in environment or settings.")
-
-        timeout_val = timeout or self.timeout_seconds
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/{self.model_name}:generateContent"
-
-        headers = {
-            "Content-Type": "application/json",
-            "x-goog-api-key": self.api_key,
-        }
-
-        payload = {
-            "contents": [
-                {
-                    "role": "user",
-                    "parts": [{"text": user_prompt}],
-                }
-            ],
-            "systemInstruction": {
-                "parts": [{"text": system_prompt}],
-            },
-            "generationConfig": {
-                "temperature": 0.1,
-                "responseMimeType": "application/json",
-            },
-        }
-
-        try:
-            with httpx.Client(timeout=float(timeout_val)) as client:
-                response = client.post(url, headers=headers, json=payload)
-                if response.status_code != 200:
-                    safe_msg = re.sub(r"key=[^\s&]+", "key=[REDACTED]", response.text[:200])
-                    raise LLMProviderError(f"Gemini API returned HTTP {response.status_code}: {safe_msg}")
-
-                data = response.json()
-                candidates = data.get("candidates", [])
-                if not candidates:
-                    raise LLMProviderError("Gemini API returned no candidates.")
-
-                content_parts = candidates[0].get("content", {}).get("parts", [])
-                if not content_parts or "text" not in content_parts[0]:
-                    raise LLMProviderError("Gemini API returned empty text part.")
-
-                return content_parts[0]["text"].strip()
-
-        except httpx.TimeoutException as exc:
-            logger.warning("Gemini REST call timed out after %s seconds.", timeout_val)
-            raise LLMProviderError(f"Gemini request timed out after {timeout_val}s") from exc
-        except httpx.RequestError as exc:
-            safe_err = re.sub(r"key=[^\s&]+", "key=[REDACTED]", str(exc))
-            logger.warning("Gemini network request error: %s", safe_err)
-            raise LLMProviderError(f"Network error contacting Gemini API: {safe_err}") from exc
 
 
 class MockLLMProvider(BaseLLMProvider):
@@ -126,18 +49,20 @@ class MockLLMProvider(BaseLLMProvider):
     ):
         self.default_response = default_response or "{}"
         self.side_effect = side_effect
-        self.call_history = []
+        self.call_history: List[Dict[str, Any]] = []
 
     def generate_text(
         self,
         system_prompt: str,
         user_prompt: str,
         timeout: Optional[int] = None,
+        **kwargs: Any,
     ) -> str:
         self.call_history.append({
             "system_prompt": system_prompt,
             "user_prompt": user_prompt,
             "timeout": timeout,
+            **kwargs,
         })
         if self.side_effect:
             raise self.side_effect
@@ -148,7 +73,7 @@ class GrokRESTProvider(BaseLLMProvider):
     """
     Lightweight, production-safe Grok (xAI) REST provider using HTTPX.
     Communicates with xAI's OpenAI-compatible /v1/chat/completions endpoint.
-    Includes strict timeout enforcement and authorization sanitization in logs.
+    Includes strict timeout enforcement, error handling, and authorization sanitization in logs.
     """
 
     def __init__(
@@ -158,19 +83,80 @@ class GrokRESTProvider(BaseLLMProvider):
         base_url: Optional[str] = None,
         timeout_seconds: Optional[int] = None,
     ):
-        self.api_key = api_key or getattr(settings, "GROK_API_KEY", None)
-        self.model_name = model_name or getattr(settings, "GROK_MODEL", "grok-beta")
-        self.base_url = (base_url or getattr(settings, "GROK_API_BASE_URL", "https://api.x.ai/v1")).rstrip("/")
+        if api_key is not None:
+            self.api_key = api_key
+        else:
+            self.api_key = (
+                getattr(settings, "GROK_API_KEY", None)
+                or getattr(settings, "GROQ_API_KEY", None)
+                or os.environ.get("GROK_API_KEY")
+                or os.environ.get("GROQ_API_KEY")
+            )
+
+        # Detect whether we are using Groq Cloud (gsk_ key) or xAI Grok
+        if self.api_key and self.api_key.startswith("gsk_"):
+            is_groq_cloud = True
+        elif self.api_key and self.api_key.startswith("xai-"):
+            is_groq_cloud = False
+        else:
+            is_groq_cloud = bool(
+                getattr(settings, "GROQ_API_KEY", None)
+                and not getattr(settings, "GROK_API_KEY", None)
+            )
+
+        if model_name is not None:
+            self.model_name = model_name
+        elif is_groq_cloud:
+            self.model_name = (
+                getattr(settings, "GROQ_MODEL", None)
+                or os.environ.get("GROQ_MODEL")
+                or "openai/gpt-oss-120b"
+            )
+        else:
+            self.model_name = (
+                getattr(settings, "GROK_MODEL", None)
+                or os.environ.get("GROK_MODEL")
+                or "grok-beta"
+            )
+
+        if base_url is not None:
+            self.base_url = base_url.rstrip("/")
+        elif is_groq_cloud:
+            self.base_url = (
+                getattr(settings, "GROQ_API_BASE_URL", None)
+                or os.environ.get("GROQ_API_BASE_URL")
+                or "https://api.groq.com/openai/v1"
+            ).rstrip("/")
+        else:
+            self.base_url = (
+                getattr(settings, "GROK_API_BASE_URL", None)
+                or os.environ.get("GROK_API_BASE_URL")
+                or "https://api.x.ai/v1"
+            ).rstrip("/")
+
         self.timeout_seconds = timeout_seconds or getattr(settings, "LLM_TIMEOUT_SECONDS", 15)
 
     def is_configured(self) -> bool:
         return bool(self.api_key and self.api_key.strip())
+
+    def _sanitize_secrets(self, text: str) -> str:
+        """Sanitizes API keys and tokens from log messages and exception strings."""
+        if not text:
+            return ""
+        sanitized = str(text)
+        if self.api_key and self.api_key.strip():
+            sanitized = sanitized.replace(self.api_key.strip(), "[REDACTED]")
+        sanitized = re.sub(r"Bearer\s+[^\s\"']+", "Bearer [REDACTED]", sanitized)
+        sanitized = re.sub(r"xai-[a-zA-Z0-9_\-]+", "[REDACTED]", sanitized)
+        sanitized = re.sub(r"gsk_[a-zA-Z0-9_\-]+", "[REDACTED]", sanitized)
+        return sanitized
 
     def generate_text(
         self,
         system_prompt: str,
         user_prompt: str,
         timeout: Optional[int] = None,
+        **kwargs: Any,
     ) -> str:
         if not self.is_configured():
             raise LLMProviderError("Grok API key is not configured in environment or settings.")
@@ -196,10 +182,15 @@ class GrokRESTProvider(BaseLLMProvider):
             with httpx.Client(timeout=float(timeout_val)) as client:
                 response = client.post(url, headers=headers, json=payload)
                 if response.status_code != 200:
-                    safe_msg = re.sub(r"Bearer\s+[^\s]+", "Bearer [REDACTED]", response.text[:200])
+                    safe_msg = self._sanitize_secrets(response.text[:300])
                     raise LLMProviderError(f"Grok API returned HTTP {response.status_code}: {safe_msg}")
 
-                data = response.json()
+                try:
+                    data = response.json()
+                except Exception as exc:
+                    safe_err = self._sanitize_secrets(str(exc))
+                    raise LLMProviderError(f"Grok API returned malformed non-JSON response: {safe_err}") from exc
+
                 choices = data.get("choices", [])
                 if not choices:
                     raise LLMProviderError("Grok API returned no choices.")
@@ -215,42 +206,34 @@ class GrokRESTProvider(BaseLLMProvider):
             logger.warning("Grok REST call timed out after %s seconds.", timeout_val)
             raise LLMProviderError(f"Grok request timed out after {timeout_val}s") from exc
         except httpx.RequestError as exc:
-            safe_err = re.sub(r"Bearer\s+[^\s]+", "Bearer [REDACTED]", str(exc))
+            safe_err = self._sanitize_secrets(str(exc))
             logger.warning("Grok network request error: %s", safe_err)
             raise LLMProviderError(f"Network error contacting Grok API: {safe_err}") from exc
 
 
-# Global or default provider instance for Gemini (Member 3)
+# Global or default provider instance for Grok (Standard Production LLM)
 _active_provider: Optional[BaseLLMProvider] = None
-
-# Global or default provider instance for Grok (Member 4)
-_active_grok_provider: Optional[BaseLLMProvider] = None
 
 
 def get_llm_provider() -> BaseLLMProvider:
-    """Returns the currently active LLM provider (Gemini by default)."""
+    """Returns the currently active production LLM provider (GrokRESTProvider by default)."""
     global _active_provider
     if _active_provider is None:
-        _active_provider = GeminiRESTProvider()
+        _active_provider = GrokRESTProvider()
     return _active_provider
 
 
-def set_llm_provider(provider: BaseLLMProvider) -> None:
+def set_llm_provider(provider: Optional[BaseLLMProvider]) -> None:
     """Sets the active LLM provider (useful for testing and dependency injection)."""
     global _active_provider
     _active_provider = provider
 
 
 def get_grok_provider() -> BaseLLMProvider:
-    """Returns the currently active Grok LLM provider."""
-    global _active_grok_provider
-    if _active_grok_provider is None:
-        _active_grok_provider = GrokRESTProvider()
-    return _active_grok_provider
+    """Returns the currently active Grok LLM provider (alias for get_llm_provider)."""
+    return get_llm_provider()
 
 
-def set_grok_provider(provider: BaseLLMProvider) -> None:
-    """Sets the active Grok LLM provider (useful for testing and dependency injection)."""
-    global _active_grok_provider
-    _active_grok_provider = provider
-
+def set_grok_provider(provider: Optional[BaseLLMProvider]) -> None:
+    """Sets the active Grok LLM provider (alias for set_llm_provider)."""
+    set_llm_provider(provider)

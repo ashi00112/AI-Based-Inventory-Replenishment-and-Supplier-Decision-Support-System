@@ -10,6 +10,7 @@ import Suppliers from './pages/Suppliers';
 import Documents from './pages/Documents';
 import Decisions from './pages/Decisions';
 import Users from './pages/Users';
+import Assistant from './pages/Assistant';
 import ProtectedRoute from './components/ProtectedRoute';
 import PublicOnlyRoute from './components/PublicOnlyRoute';
 
@@ -69,6 +70,14 @@ export default function App() {
         element={
           <ProtectedRoute>
             <Decisions />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/assistant"
+        element={
+          <ProtectedRoute>
+            <Assistant />
           </ProtectedRoute>
         }
       />

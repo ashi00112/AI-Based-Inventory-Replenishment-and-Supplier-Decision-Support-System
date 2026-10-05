@@ -103,7 +103,7 @@ def client(test_db_session):
 
 @pytest.fixture(autouse=True)
 def mock_external_llms():
-    """Ensures external LLM calls to Gemini and Grok are mocked by default for speed and isolation."""
+    """Ensures external LLM calls to Grok are mocked by default for speed and isolation."""
     from app.core.llm_provider import set_llm_provider, set_grok_provider
     default_mock = MockLLMProvider(
         default_response=json.dumps({
@@ -126,6 +126,8 @@ def mock_external_llms():
     set_llm_provider(default_mock)
     set_grok_provider(default_mock)
     yield default_mock
+    set_llm_provider(None)
+    set_grok_provider(None)
 
 
 @pytest.fixture

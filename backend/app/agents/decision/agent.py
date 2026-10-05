@@ -82,7 +82,12 @@ CRITICAL RESPONSIBLE AI DIRECTIVES & OPERATIONAL BOUNDARIES:
 3. IMMUTABLE DETERMINISTIC CALCULATIONS: You MUST NOT alter, override, or recalculate numerical values (order quantity, unit costs, stock levels, delivery windows, delivery slack, scores). All operational numbers provided in CALCULATED DECISION are final and authoritative.
 4. POLICY COMPLIANCE & TERMINOLOGY: Mandatory corporate procurement and inventory policies cannot be bypassed. Reorder point is used as SmartSupply's effective safety-stock buffer (not statistically calculated).
 5. ADVISORY NATURE: You are a decision-support advisory system assisting human procurement managers. You do NOT have autonomous purchasing authority. Recommendations require human review.
-6. EXPLAINABILITY: Provide clear, concise, professional business reasoning explaining why replenishment is or is not required, why the procurement urgency was detected, how delivery slack was evaluated, and why the designated supplier was selected over alternatives.
+6. STRUCTURED EXPLAINABILITY (MANDATORY FORMAT):
+Your "reasoning" MUST be organized into these clearly labeled sections using bold headings or bullet points so users immediately understand the inventory breakdown, how the stockout occurs, and why the action is required:
+- **1. Current Inventory Position:** State exact available-to-fulfil stock (on-hand minus reserved), confirmed incoming pipeline, effective inventory position, and Reorder Point (ROP) safety-stock buffer.
+- **2. Demand Forecast & Stockout Mechanism:** Explain clearly HOW and WHY the stockout occurs. State the forecasted demand over the horizon and expected lead-time demand. State the exact projected stockout date and days remaining until available stock is exhausted. Contrast this with the ROP buffer breach day. Explicitly explain that while incoming units exist in the pipeline, their exact arrival date is unconfirmed, meaning available shelf inventory will be exhausted first unless order delivery arrives in time.
+- **3. Replenishment Order Sizing & Urgency:** State the net shortage requirement, the authoritative recommended order quantity (accounting for supplier MOQ), and explain why the detected urgency tier was triggered.
+- **4. Supplier Selection & Delivery Feasibility:** State the designated supplier, lead time, delivery slack, unit cost, and total spend. Explain why this supplier was chosen (e.g. delivery speed satisfies delivery window) and why slower candidates were disqualified.
 7. MISSING DATA TRANSPARENCY & INCOMING STOCK: When incoming stock is present, note that it is included in replenishment quantity planning as confirmed pipeline inventory, but its exact arrival timing is unknown because the inventory model does not store an expected delivery date. NEVER claim or imply that incoming stock arrives on Day 3 or any other specific day.
 8. EXACT URGENCY WORDING: Use the exact effective urgency (e.g. "Under EMERGENCY urgency..." or "Under HIGH urgency..."). NEVER combine labels like "EMERGENCY / HIGH". If a manual override is present, state both clearly: "System-derived urgency: HIGH; Effective urgency after override: EMERGENCY".
 9. TIMING HORIZON CONSISTENCY: When available inventory exhaustion occurs earlier than reorder-point buffer breach, explain: "Although the reorder-point buffer is projected to be breached in X days, available-to-fulfil inventory may be exhausted in approximately Y days. The Y-day stockout horizon therefore governs supplier delivery feasibility."
@@ -91,7 +96,7 @@ CRITICAL RESPONSIBLE AI DIRECTIVES & OPERATIONAL BOUNDARIES:
 OUTPUT FORMAT:
 You MUST respond with valid JSON strictly conforming to this schema:
 {
-  "reasoning": "<Concise, professional explanation of the replenishment decision, detected urgency, and supplier choice>",
+  "reasoning": "<The structured multi-section explanation formatted in clear sections 1 to 4>",
   "factors": [
     "<Key quantitative, delivery, or policy factor 1>",
     "<Key quantitative, delivery, or policy factor 2>"
@@ -554,6 +559,30 @@ class DecisionAgent(BaseAgent):
             derived_urgency=derived_urgency,
         )
 
+        # Suppress any false missing SLA/performance documentation warning if evidence exists
+        final_warnings: List[str] = []
+        for w in list(dict.fromkeys(warnings)):
+            w_lower = w.lower()
+            is_missing_doc = any(k in w_lower for k in ["lack", "missing", "insufficient", "no sla", "without sla", "no performance", "no documentation"]) and any(k in w_lower for k in ["sla", "performance", "documentation", "evidence", "document"])
+            if is_missing_doc:
+                suppress = False
+                if chosen_candidate:
+                    c_id = chosen_candidate.get("supplier_id")
+                    c_name = (chosen_candidate.get("supplier_name") or "").lower()
+                    c_ev = chosen_candidate.get("evidence") or []
+                    if len(c_ev) > 0 and ((c_id and str(c_id) in w) or (c_name and c_name in w_lower) or "supplier" in w_lower):
+                        suppress = True
+                for cand in raw_candidates:
+                    s_id = cand.get("supplier_id")
+                    s_name = (cand.get("supplier_name") or "").lower()
+                    s_ev = cand.get("evidence") or []
+                    if len(s_ev) > 0 and ((s_id and str(s_id) in w) or (s_name and s_name in w_lower)):
+                        suppress = True
+                        break
+                if suppress:
+                    continue
+            final_warnings.append(w)
+
         return DecisionRecommendationResponse(
             id=None,
             product_id=product.id,
@@ -574,7 +603,7 @@ class DecisionAgent(BaseAgent):
             risk_level=overall_risk_level,
             reasoning=reasoning,
             factors=factors,
-            warnings=list(dict.fromkeys(warnings)),
+            warnings=final_warnings,
             policy_references=list(dict.fromkeys(policy_refs)),
             confidence=confidence,
             approval_status=ApprovalStatus.PENDING,
@@ -671,6 +700,11 @@ class DecisionAgent(BaseAgent):
 
         user_prompt = (
             "TASK: Explain the supply-chain replenishment recommendation using ONLY the following grounded context.\n"
+            "You MUST format the 'reasoning' into these 4 clear markdown sections:\n"
+            "**1. Current Inventory Position:** (Available-to-fulfil stock, on-hand, reserved, incoming pipeline, effective inventory, and ROP safety buffer).\n"
+            "**2. Demand Forecast & Stockout Mechanism:** (How and why stockout is happening, customer demand rate, projected stockout date/days, and why incoming pipeline does not arrive in time to stop the initial shelf stockout).\n"
+            "**3. Replenishment Order Sizing & Urgency:** (Net shortage, authoritative recommended order quantity, MOQ compliance, and urgency tier reason).\n"
+            "**4. Supplier Selection & Delivery Feasibility:** (Designated supplier, lead time vs deadline, delivery slack, unit cost, and why competitors failed).\n"
             "Do not alter the calculated numbers.\n\n"
             f"STRUCTURED CONTEXT:\n{json.dumps(user_prompt_data, indent=2)}\n\n"
             "Respond strictly in the required JSON format."

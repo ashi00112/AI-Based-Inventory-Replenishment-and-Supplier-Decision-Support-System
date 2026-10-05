@@ -15,6 +15,7 @@ from app.routers import (
     suppliers,
     decision,
     users,
+    chat,
 )
 
 api_router = APIRouter()
@@ -95,4 +96,11 @@ api_router.include_router(
 api_router.include_router(
     users.router,
     tags=["User Management"],
-)
+)
+
+# Member 5 AI Assistant Chatbot routes
+api_router.include_router(
+    chat.router,
+    tags=["AI Assistant"],
+)
+
