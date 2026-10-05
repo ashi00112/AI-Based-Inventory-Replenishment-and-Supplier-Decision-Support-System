@@ -147,13 +147,23 @@ def resolve_supplier_entity_with_status(
 
     # Priority 3: Distinctive primary word in name (e.g. 'TechSource', 'NextGen', 'Island Tech')
     generic_tokens = {"lanka", "supplies", "wholesale", "distribution", "electronics", "pvt", "ltd", "co"}
-    for supp in sorted_by_len:
+    priority_3_matches = []
+    for supp in suppliers:
         name_tokens = [t.lower() for t in re.split(r"[\s\-]+", supp.name) if t.lower() not in generic_tokens]
+        matched = False
         for token in name_tokens:
             if len(token) >= 4:
                 token_pattern = r"\b" + re.escape(token) + r"\b"
                 if re.search(token_pattern, norm_q):
-                    return supp, False, [supp]
+                    matched = True
+                    break
+        if matched:
+            priority_3_matches.append(supp)
+
+    if len(priority_3_matches) == 1:
+        return priority_3_matches[0], False, [priority_3_matches[0]]
+    elif len(priority_3_matches) > 1:
+        return None, True, priority_3_matches
 
     # Priority 4: High-confidence fuzzy matching against query ngrams
     query_ngrams = _extract_query_ngrams(query, max_n=3)

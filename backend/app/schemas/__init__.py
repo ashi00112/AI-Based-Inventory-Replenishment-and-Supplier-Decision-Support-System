@@ -48,6 +48,17 @@ from app.schemas.user import (
     AdminUserUpdate,
     UserListResponse,
 )
+from app.schemas.chat import (
+    ChatConversationCreate,
+    ChatConversationUpdate,
+    ChatMessageRequest,
+    ChatMessageResponse,
+    ChatConversationSummary,
+    ChatConversationDetail,
+    ChatMessageItem,
+    ChatSourceItem,
+    DecisionSummaryCard,
+)
 
 __all__ = [
     "HealthResponse",
@@ -87,6 +98,15 @@ __all__ = [
     "AdminUserCreate",
     "AdminUserUpdate",
     "UserListResponse",
+    "ChatConversationCreate",
+    "ChatConversationUpdate",
+    "ChatMessageRequest",
+    "ChatMessageResponse",
+    "ChatConversationSummary",
+    "ChatConversationDetail",
+    "ChatMessageItem",
+    "ChatSourceItem",
+    "DecisionSummaryCard",
 ]
 
 

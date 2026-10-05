@@ -14,6 +14,7 @@ import {
   X,
   Shield,
   UserCheck,
+  Bot,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import AnimatedBrand from './AnimatedBrand';
@@ -26,6 +27,7 @@ const baseNavLinks = [
   { to: '/suppliers', label: 'Suppliers', icon: Truck },
   { to: '/documents', label: 'Documents', icon: FileText },
   { to: '/decisions', label: 'Decisions', icon: Sparkles },
+  { to: '/assistant', label: 'AI Assistant', icon: Bot },
 ];
 
 export default function Navbar() {

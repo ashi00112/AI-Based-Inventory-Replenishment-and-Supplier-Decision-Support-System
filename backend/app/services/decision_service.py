@@ -164,16 +164,15 @@ def derive_delivery_window_and_timing(
     days_until_buffer_breach: Optional[int] = None
     days_until_stockout: Optional[int] = None
 
-    # Check Day 0 conditions
-    if effective_inventory < safe_rop:
+    # Check Day 0 conditions (timing / urgency calculated from available_stock only)
+    if safe_available <= safe_rop:
         days_until_buffer_breach = 0
     if safe_available <= 0:
         days_until_stockout = 0
 
-    # Project day-by-day trajectories using daily forecasts
+    # Project day-by-day trajectories using daily forecasts (using available_stock only for timing)
     if daily_forecasts:
-        proj_effective = float(effective_inventory)
-        proj_physical = float(safe_available)
+        proj_available = float(safe_available)
 
         for day_idx, pt in enumerate(daily_forecasts, start=1):
             if hasattr(pt, "forecasted_quantity"):
@@ -183,15 +182,20 @@ def derive_delivery_window_and_timing(
             else:
                 demand_qty = 0.0
 
-            # Effective stock trajectory (ROP buffer breach check)
-            proj_effective = round(proj_effective - demand_qty, 4)
-            if proj_effective < float(safe_rop) and days_until_buffer_breach is None:
+            proj_available = round(proj_available - demand_qty, 4)
+
+            # ROP buffer breach check (using available stock only; ETA of incoming is unknown)
+            if proj_available <= float(safe_rop) and days_until_buffer_breach is None:
                 days_until_buffer_breach = day_idx
 
-            # Physical stock trajectory (physical stockout check: stock <= 0)
-            proj_physical = round(proj_physical - demand_qty, 4)
-            if proj_physical <= 0.0 and days_until_stockout is None:
+            # Physical stockout check (available stock <= 0)
+            if proj_available <= 0.0 and days_until_stockout is None:
                 days_until_stockout = day_idx
+
+    # Invariant: days_until_buffer_breach <= days_until_stockout
+    if days_until_stockout is not None:
+        if days_until_buffer_breach is None or days_until_buffer_breach > days_until_stockout:
+            days_until_buffer_breach = days_until_stockout
 
     days_until_unsafe = days_until_buffer_breach  # backward-compatible alias
 
@@ -715,7 +719,8 @@ def select_best_supplier_candidate(
         c_copy["is_feasible"] = elig_status in ("eligible", "zero_slack")
         c_copy["disqualification_reason"] = elig_reason if elig_status not in ("eligible", "zero_slack") else None
 
-        if not policy_signals.evidence_refs and policy_signals.otif_target is None:
+        cand_ev = c_copy.get("evidence") or []
+        if not (cand_ev or policy_signals.evidence_refs) and policy_signals.otif_target is None:
             warnings.append(f"SLA evidence was insufficient for supplier '{c_copy['supplier_name']}'; neutral baseline score (80.0) applied.")
 
         if elig_status == "policy_restricted":
@@ -895,21 +900,32 @@ def generate_deterministic_explanation(
         else:
             inv_summary = f"Net available inventory ({available_stock} units) "
 
-        timing_clause = ""
+        stockout_how_why = ""
         if days_until_stockout is not None and breach_day is not None and days_until_stockout < breach_day:
-            timing_clause = (
-                f"Although the reorder-point buffer is projected to be breached in {breach_day} days, "
-                f"available-to-fulfil inventory may be exhausted in approximately {days_until_stockout} days. "
-                f"The {days_until_stockout}-day stockout horizon therefore governs supplier delivery feasibility. "
+            stockout_how_why = (
+                f"- **Stockout Timeline & Cause:** Although the reorder-point buffer is projected to be breached in {breach_day} days, "
+                f"available-to-fulfil inventory may be exhausted in approximately {days_until_stockout} days due to forecasted customer burn rate. "
+                f"The {days_until_stockout}-day stockout horizon therefore governs supplier delivery feasibility."
+            )
+        elif days_until_stockout is not None:
+            stockout_how_why = (
+                f"- **Stockout Timeline & Cause:** Available-to-fulfil inventory may be exhausted in approximately {days_until_stockout} days "
+                f"as active customer demand depletes current stock."
             )
         elif breach_day is not None:
-            timing_clause = f"Projected inventory is expected to become unsafe within approximately {breach_day} days. "
+            stockout_how_why = f"- **Stockout Timeline & Cause:** Projected inventory is expected to become unsafe within approximately {breach_day} days."
 
+        incoming_note = ""
+        if safe_incoming > 0:
+            incoming_note = (
+                f"- **Incoming Pipeline Status:** {safe_incoming} units are confirmed incoming but have an unconfirmed arrival date, "
+                f"meaning shelf inventory will be exhausted before inbound stock arrives unless replenishment is expedited.\n"
+            )
         zero_slack_clause = ""
         if slack == 0:
             zero_slack_clause = (
                 f"'{sup_name}' is the only supplier capable of meeting the {required_delivery_window_days}-day delivery deadline. "
-                f"Its {lead_time}-day lead time provides zero safety margin, so any delivery delay may still cause a stockout. "
+                f"Its {lead_time}-day lead time provides zero safety margin, so any delivery delay may still cause a stockout."
             )
 
         urgency_note = f"Selected under {urgency.upper()} urgency"
@@ -919,12 +935,20 @@ def generate_deterministic_explanation(
             )
 
         reasoning = (
-            f"Replenishment is REQUIRED for '{product_name}'. {inv_summary}"
-            f"Forecast demand over the selected horizon is {predicted_demand:.1f} units. "
-            f"SmartSupply retains the product's {reorder_point}-unit reorder point as its effective safety-stock buffer. "
-            f"Therefore approximately {req_qty} units are required before supplier MOQ constraints. "
-            f"{timing_clause}{supplier_info} {zero_slack_clause}"
-            f"{urgency_note} (Unit cost: LKR {unit_cost:,.2f}, Lead time: {lead_time} days with {slack} days delivery slack, MOQ: {moq} units, Total: LKR {total_cost:,.2f})."
+            f"Replenishment is REQUIRED for '{product_name}'.\n\n"
+            f"**Current Inventory Position:**\n"
+            f"- Available-to-fulfil stock: {available_stock} units\n"
+            f"- Confirmed incoming pipeline: {safe_incoming} units are confirmed incoming (Effective inventory position: {effective_inventory} units)\n"
+            f"- Effective safety-stock buffer (Reorder Point): {reorder_point} units\n\n"
+            f"**Demand Forecast & Stockout Mechanism:**\n"
+            f"- Forecasted demand over horizon: {predicted_demand:.1f} units\n"
+            f"{stockout_how_why}\n"
+            f"{incoming_note}\n"
+            f"**Replenishment Decision & Supplier Selection:**\n"
+            f"- SmartSupply retains the product's {reorder_point}-unit reorder point as its effective safety-stock buffer. "
+            f"Therefore approximately {req_qty} units are required before supplier MOQ constraints, resulting in a recommended order of {quantity} units.\n"
+            f"- {supplier_info} {zero_slack_clause}\n"
+            f"- {urgency_note} (Unit cost: LKR {unit_cost:,.2f}, Lead time: {lead_time} days with {slack} days delivery slack, MOQ: {moq} units, Total: LKR {total_cost:,.2f})."
         )
     elif replenishment_required:
         reasoning = (
