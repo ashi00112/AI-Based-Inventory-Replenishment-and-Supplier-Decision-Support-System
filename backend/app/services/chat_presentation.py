@@ -64,6 +64,24 @@ RE_HORIZON_SCENARIO = re.compile(
     re.IGNORECASE,
 )
 
+# Conversational / Bot Identity / Greetings
+RE_BOT_IDENTITY = re.compile(
+    r"\b(who (are you|created you|made you|built you)|what are you|what is your name|your name|tell me about yourself|are you (an )?ai|are you a bot|what is smartsupply)\b",
+    re.IGNORECASE,
+)
+RE_BOT_GREETING = re.compile(
+    r"^\s*(hi|hello|hey|greetings|good (morning|afternoon|evening|day)|howdy|yo)\b|\bhow are you\b|\bhow's it going\b|\bwhat's up\b|\bhow do you do\b",
+    re.IGNORECASE,
+)
+RE_BOT_CAPABILITIES = re.compile(
+    r"\b(what can you do|how can you help|what are your (features|capabilities)|what can i (ask|do)|help me|how do (i|we) use (this|smartsupply)|what do you do)\b|^\s*help\s*[.!?]?$",
+    re.IGNORECASE,
+)
+RE_BOT_COURTESY = re.compile(
+    r"^\s*(thank you|thanks|thanks a lot|thank you so much|bye|goodbye|see you|cya|ok|okay|cool|great|awesome|understood)\s*[.!?]?$",
+    re.IGNORECASE,
+)
+
 
 @dataclass(frozen=True)
 class HorizonParseResult:
@@ -521,6 +539,52 @@ def format_document_answer(
     return body
 
 
+def format_general_chat_answer(query: str) -> str:
+    """Answers generic conversational questions (greetings, identity, capabilities, small talk)."""
+    norm = (query or "").strip().lower()
+
+    if RE_BOT_IDENTITY.search(norm):
+        return (
+            "I am the SmartSupply AI Assistant, an intelligent supply chain copilot designed to help you optimize inventory, forecast product demand, analyze stockout risks, and evaluate supplier procurement decisions.\n\n"
+            "You can ask me to check stock levels, compare supplier pricing and lead times, run replenishment recommendations, or review procurement policies. How can I assist you today?"
+        )
+
+    if RE_BOT_CAPABILITIES.search(norm):
+        return (
+            "I can assist you across several core supply chain workflows:\n\n"
+            "• **Inventory Status**: Check on-hand, reserved, available, and incoming stock for catalog products.\n"
+            "• **Demand Forecasting**: Predict customer demand across configurable horizons (1 to 90 days).\n"
+            "• **Stockout Risk**: Detect buffer breaches and estimated days until inventory stockout.\n"
+            "• **Supplier Comparisons**: Compare supplier lead times, unit costs, MOQs, and performance metrics.\n"
+            "• **Replenishment Decisions**: Run end-to-end multi-agent replenishment recommendations with supplier selection and order quantities.\n"
+            "• **Policy & SLA Insights**: Inquire about delivery penalty clauses, OTIF targets, and procurement rules.\n\n"
+            "What would you like to explore?"
+        )
+
+    if any(p in norm for p in ["how are you", "how are you doing", "how's it going", "how do you do", "what's up"]):
+        return (
+            "I'm doing well, thank you! I'm ready to help you with inventory tracking, demand forecasting, or supplier replenishment. How can I assist you today?"
+        )
+
+    if RE_BOT_GREETING.search(norm):
+        return (
+            "Hello! I am your SmartSupply AI Assistant. I can help you monitor inventory levels, forecast demand, detect stockout risks, and evaluate supplier replenishment decisions. What would you like to check today?"
+        )
+
+    if any(p in norm for p in ["thank you", "thanks", "appreciate it"]):
+        return "You're very welcome! Let me know if you need anything else regarding your inventory, forecasts, or suppliers."
+
+    if any(p in norm for p in ["bye", "goodbye", "see you", "have a good day", "have a nice day"]):
+        return "Goodbye! Feel free to return anytime you need help with inventory or procurement decisions."
+
+    if any(p in norm for p in ["ok", "okay", "understood", "cool", "great", "awesome", "perfect"]):
+        return "Glad to hear! Let me know if you'd like to check inventory, analyze demand forecasts, or evaluate suppliers."
+
+    return (
+        "I am the SmartSupply AI Assistant, specialized in supply chain management, inventory replenishment, and procurement analysis. While I cannot assist with topics outside this scope, I'm happy to help you with product inventory, demand forecasts, or supplier evaluations!"
+    )
+
+
 def format_forecast_answer(
     product_name: str,
     horizon_days: int,
@@ -819,6 +883,7 @@ INTENT_RESPONSE_CONTRACTS: Dict[str, str] = {
     "FULL_REPLENISHMENT_DECISION": "One-sentence recommendation directly in sentence 1, then a '**Why?**' list of 3–5 short bullets. Under 120 words.",
     "DECISION_EXPLANATION": "Direct answer in the very first sentence to the specific 'why', 'how', or 'calculate' question, followed by 2–4 supporting bullets. Do NOT show recommendation cards.",
     "EVIDENCE_REQUEST": "List the supporting documents (title and page) in 1–4 lines. Do not quote long excerpts.",
+    "GENERAL_CHAT": "Respond warmly, professionally, and concisely as SmartSupply AI Assistant. Answer questions about your identity, role, or capabilities directly in sentence 1. Greet the user or answer their pleasantry, and invite them to explore inventory, forecasting, risk, or supplier decisions. Do NOT cite documents or invent fictional data.",
 }
 
 DETAILED_RESPONSE_CONTRACT = (
