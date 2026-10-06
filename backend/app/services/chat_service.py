@@ -24,7 +24,7 @@ import re
 from typing import Any, Dict, List, Optional, Tuple
 
 from sqlalchemy import func, select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 from app.core.config import settings
 import app.core.llm_provider as llm_provider_module
@@ -55,6 +55,10 @@ from app.services.chat_presentation import (
     HORIZON_SOURCE_REUSED,
     HORIZON_SOURCE_SELECTED,
     INTENT_RESPONSE_CONTRACTS,
+    RE_BOT_CAPABILITIES,
+    RE_BOT_COURTESY,
+    RE_BOT_GREETING,
+    RE_BOT_IDENTITY,
     RE_HORIZON_SCENARIO,
     build_decision_details,
     detect_supplier_fact_focus,
@@ -66,6 +70,7 @@ from app.services.chat_presentation import (
     format_fastest_supplier_answer,
     format_forecast_answer,
     format_forecast_comparison_answer,
+    format_general_chat_answer,
     format_inventory_answer,
     format_lowest_moq_supplier_answer,
     format_risk_answer,
@@ -99,6 +104,7 @@ INTENT_FULL_REPLENISHMENT_DECISION = "FULL_REPLENISHMENT_DECISION"
 INTENT_DECISION_EXPLANATION = "DECISION_EXPLANATION"
 INTENT_EVIDENCE_REQUEST = "EVIDENCE_REQUEST"
 INTENT_CLARIFICATION_NEEDED = "CLARIFICATION_NEEDED"
+INTENT_GENERAL_CHAT = "GENERAL_CHAT"
 INTENT_UNKNOWN = "UNKNOWN"
 
 # Read-Only Action Guard regex
@@ -246,6 +252,7 @@ class ChatService:
         """Lists conversations belonging strictly to the current user, ordered newest first."""
         query = (
             select(ChatConversation)
+            .options(selectinload(ChatConversation.messages))
             .where(ChatConversation.user_id == self.user.id)
             .order_by(ChatConversation.updated_at.desc())
             .offset(offset)
@@ -446,6 +453,16 @@ class ChatService:
         """
         norm_q = query.lower()
 
+        # Conversational greetings, identity, capabilities, or pleasantries
+        if not product and not supplier:
+            if (
+                RE_BOT_IDENTITY.search(norm_q)
+                or RE_BOT_GREETING.search(norm_q)
+                or RE_BOT_CAPABILITIES.search(norm_q)
+                or RE_BOT_COURTESY.search(norm_q)
+            ):
+                return INTENT_GENERAL_CHAT
+
         # Follow-up decision explanations: "Why them?", "Why Digital?", "Why not NextGen?", "Why is urgency emergency?"
         # Also includes incoming inventory questions and order quantity calculation explanations
         if (
@@ -534,6 +551,10 @@ class ChatService:
         if context.get("last_intent") in (INTENT_FULL_REPLENISHMENT_DECISION, INTENT_DECISION_EXPLANATION):
             if supplier or "why" in norm_q:
                 return INTENT_DECISION_EXPLANATION
+
+        # If no domain entities or keywords matched, treat as conversational chat rather than searching documents
+        if not product and not supplier:
+            return INTENT_GENERAL_CHAT
 
         return INTENT_UNKNOWN
 
@@ -1668,7 +1689,8 @@ class ChatService:
         llm = llm_provider_module.get_llm_provider()
         if not getattr(llm, "is_configured", lambda: True)():
             logger.info("LLM provider unconfigured; falling back to deterministic response.")
-            return structured_answer, "degraded"
+            status = "success" if intent == INTENT_GENERAL_CHAT else "degraded"
+            return structured_answer, status
 
         # Prepare grounding payload
         doc_citations = []
@@ -1712,10 +1734,15 @@ class ChatService:
                 return strip_decorative_rules(synthesized.strip()), "success"
         except LLMProviderError as llm_err:
             logger.warning("LLM generation error: %s. Using deterministic fallback.", llm_err)
+            if intent == INTENT_GENERAL_CHAT:
+                return strip_decorative_rules(structured_answer), "success"
         except Exception as exc:
             logger.warning("Unexpected error during LLM synthesis: %s. Using deterministic fallback.", exc)
+            if intent == INTENT_GENERAL_CHAT:
+                return strip_decorative_rules(structured_answer), "success"
 
-        return strip_decorative_rules(structured_answer), "degraded"
+        fallback_status = "success" if intent == INTENT_GENERAL_CHAT else "degraded"
+        return strip_decorative_rules(structured_answer), fallback_status
 
     # =========================================================================
     # Main Message Processing Pipeline
@@ -2290,11 +2317,20 @@ class ChatService:
             else:
                 raw_structured_answer = "Which product's suppliers would you like to compare?"
 
+        elif intent == INTENT_GENERAL_CHAT:
+            raw_structured_answer = format_general_chat_answer(clean_user_message)
+            sources = []
+            agent_outputs_used.append("Assistant")
+
         else:
             if product:
                 raw_structured_answer, sources, inventory_snapshot = self._execute_inventory_lookup(product, query=clean_user_message)
+                agent_outputs_used.append("InventoryAgent")
             else:
-                raw_structured_answer, sources, meta_payload = self._execute_procurement_policy(clean_user_message)
+                raw_structured_answer = format_general_chat_answer(clean_user_message)
+                sources = []
+                intent = INTENT_GENERAL_CHAT
+                agent_outputs_used.append("Assistant")
 
         # Prepend reused horizon notice if applicable
         if reused_horizon_prefix and not raw_structured_answer.startswith(reused_horizon_prefix):

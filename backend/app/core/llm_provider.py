@@ -176,6 +176,7 @@ class GrokRESTProvider(BaseLLMProvider):
                 {"role": "user", "content": user_prompt},
             ],
             "temperature": 0.1,
+            "max_tokens": kwargs.get("max_tokens", 800),
         }
 
         try:
@@ -197,6 +198,8 @@ class GrokRESTProvider(BaseLLMProvider):
 
                 message = choices[0].get("message", {})
                 content = message.get("content", "")
+                if not content and message.get("reasoning"):
+                    content = message.get("reasoning", "")
                 if not content:
                     raise LLMProviderError("Grok API returned empty message content.")
 

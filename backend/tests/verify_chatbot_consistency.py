@@ -73,8 +73,8 @@ def run_tests():
         print("\n--- QUERY 5 ---")
         print("User: What happens if TechSource delivers late?")
         print("Intent:", r5.intent)
-        print("Answer:\n" + r5.answer)
-        assert "24-hour" in r5.answer and ("1.5%" in r5.answer or "penalty" in r5.answer), "Q5 failed: 24h notice / penalty expected"
+        ans5 = r5.answer.replace("\u2011", "-").replace("\u202f", " ")
+        assert "24-hour" in ans5 and ("1.5%" in ans5 or "1.5 %" in ans5 or "penalty" in ans5), "Q5 failed: 24h notice / penalty expected"
 
         # ---------------------------------------------------------
         # Setup active decision for follow-ups (Q6, Q7, Q8, Q9, Q12, Q13)

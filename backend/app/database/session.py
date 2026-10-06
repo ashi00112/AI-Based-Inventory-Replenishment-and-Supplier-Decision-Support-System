@@ -3,12 +3,14 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, Session
 from app.core.config import settings
 
-# Create synchronous engine with connection pooling and connect timeout
+from sqlalchemy.pool import NullPool
+
+# Create synchronous engine using NullPool for Supabase external pooler
 _connect_args = {"check_same_thread": False} if "sqlite" in settings.sync_database_url else {"connect_timeout": 15}
 engine = create_engine(
     settings.sync_database_url,
-    pool_pre_ping=True,
-    echo=settings.DEBUG,
+    poolclass=NullPool,
+    echo=False,
     connect_args=_connect_args,
 )
 
